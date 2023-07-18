@@ -219,7 +219,7 @@ class Subscription(models.Model):
         related_name='author_subscriptions',
         on_delete=models.CASCADE,
         help_text='На автора могут подписаться другие пользователи',
-        )
+    )
 
     class Meta:
         ordering = ('-id',)

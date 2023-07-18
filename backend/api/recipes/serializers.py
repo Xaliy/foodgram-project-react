@@ -171,7 +171,7 @@ class RecipePostSerializer(ModelSerializer):
         if not request.user.is_authenticated:
             raise PermissionDenied(
                 detail='Вы должны быть зарегистрированы, чтобы создать рецепт.'
-                )
+            )
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(author=request.user, **validated_data)
