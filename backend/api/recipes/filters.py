@@ -1,21 +1,11 @@
 from django_filters.rest_framework import (CharFilter, FilterSet,
                                            ModelMultipleChoiceFilter,
                                            NumberFilter)
-from rest_framework import filters
 
-from recipes.models import Ingredient, Recipe, Tag
-
-
-class CustomFilterIngredient(filters.SearchFilter):
-    """Фильтр для представления IngredientViewSet. Поиск по наимеенованию."""
-    search_param = 'name'
-
-    class Meta:
-        model = Ingredient
-        fields = ('name',)
+from recipes.models import Recipe, Tag
 
 
-class CustomFilterRecipe(FilterSet):
+class RecipeFilter(FilterSet):
     """
     Фильтр для представления RecipeViewSet.
     Поиск позволяет фильтровать по автору, тегам,

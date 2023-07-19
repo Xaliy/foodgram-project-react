@@ -1,31 +1,32 @@
 from http import HTTPStatus
+from tempfile import TemporaryFile
 
 from django.contrib.auth import get_user_model
-from django.http.response import HttpResponse
+from django.db.models import Exists, OuterRef
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from api.permissions import IsAdminAuthorOrReadOnly
-from recipes.models import (Tag, Ingredient, Recipe,
-                            RecipeIngredient, ShoppingCart, Favorite)
-from .filters import CustomFilterIngredient, CustomFilterRecipe
-from .serializers import (TagSerializer, IngredientSerializer,
-                          RecipeSerializer, RecipePostSerializer,
-                          FavoriteRecipeSerializer,
-                          ShoppingCartSerializer)
+from api.permissions import IsAdminOrReadOnly, IsAuthor
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 
+from .filters import RecipeFilter
+from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
+                          RecipePostSerializer, RecipeSerializer,
+                          ShoppingCartSerializer, TagSerializer)
 
 User = get_user_model()
 
 
 class TagViewSet(ReadOnlyModelViewSet):
-    """Представление тегов."""
 
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
@@ -33,12 +34,11 @@ class TagViewSet(ReadOnlyModelViewSet):
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
-    """Представление список ингредиентов."""
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = IsAdminAuthorOrReadOnly
-    filterset_class = CustomFilterIngredient
+    permission_classes = IsAdminOrReadOnly, IsAuthor
+    filter_backends = [SearchFilter]
     search_fields = ('^name',)
     pagination_class = None
 
@@ -50,11 +50,12 @@ class RecipeViewSet(ModelViewSet):
     """
 
     queryset = Recipe.objects.all()
-    permission_classes = (IsAuthenticatedOrReadOnly, IsAdminAuthorOrReadOnly)
     serializer_class = RecipeSerializer
-    pagination_class = LimitOffsetPagination
+    permission_classes = (IsAuthenticatedOrReadOnly,
+                          IsAdminOrReadOnly, IsAuthor)
     filter_backends = (DjangoFilterBackend, )
-    filterset_class = CustomFilterRecipe
+    filterset_class = RecipeFilter
+    pagination_class = LimitOffsetPagination
 
     def get_serializer_class(self):
         """Метод для выбора класса сериализатора."""
@@ -62,74 +63,109 @@ class RecipeViewSet(ModelViewSet):
             return RecipeSerializer
         return RecipePostSerializer
 
-    @action(
-        detail=True,
-        methods=('POST', 'DELETE'),
-        permission_classes=[IsAuthenticated]
-    )
-    def shopping_cart(self, request, pk):
+    def get_queryset(self):
         """
-        Метод обрабатывает запросы по формированию корзины.
-        Если POST, то рецепт добавляется в корзину.
-        Если DELETE, то рецепт удаляет из корзины.
+        Метод используется для получения списка объектов Recipe
+        из базы данных и добавления в каждый объект дополнительных
+        полей is_favorited и is_in_shopping_cart.
+        """
+        queryset = super().get_queryset()
+        user = self.request.user
+        if user.is_authenticated:
+            queryset = queryset.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(user=user,
+                                            recipe=OuterRef('id'))
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.filter(user=user,
+                                                recipe=OuterRef('id'))
+                )
+            )
+        return queryset
+
+    def add_to_list(request, pk, serializer_class, model_class):
+        """
+        Метод добавляет объект в список.
+        Используется в методах shopping_cart и favorite.
         """
         recipe = get_object_or_404(Recipe, id=pk)
         data = {'user': request.user.id,
                 'recipe': recipe.id}
-        serializer = ShoppingCartSerializer(
+        serializer = serializer_class(
             data=data, context={'request': request}
         )
 
-        if request.method == 'POST':
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=HTTPStatus.CREATED)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
-        if ShoppingCart.objects.filter(user=data['user'],
-                                       recipe=data['recipe']
-                                       ).exists():
-            ShoppingCart.objects.get(user=data['user'],
-                                     recipe=data['recipe']
-                                     ).delete()
-            return Response({'status': 'Рецепт удален из корзины'},
-                            status=HTTPStatus.OK,)
-
-        return Response({'status': 'Рецепта в корзине нет'},
-                        status=HTTPStatus.BAD_REQUEST,)
+        return Response(serializer.data, status=HTTPStatus.CREATED)
 
     @action(
         detail=True,
-        methods=('POST', 'DELETE'),
+        methods=['POST'],
+        permission_classes=[IsAuthenticated]
+    )
+    def shopping_cart(self, request, pk):
+        """
+        Метод добавляет рецепт в корзину.
+        """
+        return self.add_to_list(request, pk, ShoppingCartSerializer,
+                                ShoppingCart)
+
+    @shopping_cart.mapping.delete
+    def remove_from_cart(self, request, pk):
+        """Метод удаляет рецепт из корзины."""
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        ShoppingCart.objects.filter(user=user, recipe=recipe).delete()
+
+        return Response({'status': 'Рецепт удален из корзины'},
+                        status=HTTPStatus.OK)
+
+    @action(
+        detail=True,
+        methods=['POST'],
+        permission_classes=[IsAuthenticated]
     )
     def favorite(self, request, pk):
-        """
-        Метод обрабатывает запросы на формирование списка избранных рецептов.
-        Если POST, то рецепт добавляется в список.
-        Если DELETE, то удаляет рецепт из списка.
-        """
-        recipe = get_object_or_404(Recipe, id=pk)
+        """Метод добавляет рецепт в список избранных."""
+        return self.add_to_list(request, pk, FavoriteRecipeSerializer,
+                                Favorite)
+
+    @favorite.mapping.delete
+    def remove_from_favorite(self, request, pk):
+        """Метод удаляет рецепт из списка избранных."""
         user = request.user
-        data = {
-            'user': user.id,
-            'recipe': recipe.id
-        }
-        serializer = FavoriteRecipeSerializer(data=data,
-                                              context={'request': request})
+        recipe = get_object_or_404(Recipe, id=pk)
+        Favorite.objects.filter(user=user, recipe=recipe).delete()
 
-        if request.method == 'POST':
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=HTTPStatus.CREATED)
+        return Response({'status': 'Рецепт удален из списка избранных'},
+                        status=HTTPStatus.OK)
 
-        if Favorite.objects.filter(user=data['user'],
-                                   recipe=data['recipe']).exists():
-            Favorite.objects.get(user=data['user'],
-                                 recipe=data['recipe']).delete()
-            return Response({'status': 'Рецепт удален из списка избранных'},
-                            status=HTTPStatus.OK,)
+    def get_shopping_list(user):
+        """
+        Функция для получения списока покупок пользователя.
+        Используется в методе download_shopping_cart.
+        """
+        ingredients = (
+            RecipeIngredient.objects
+            .filter(recipe__shopping_list__user=user)
+            .order_by('ingredient__name')
+            .values('ingredient__name', 'ingredient__unit_of_measurement')
+            .annotate(amount=sum('amount'))
+        )
 
-        return Response({'status': 'Рецепта нет в списке избранных'},
-                        status=HTTPStatus.BAD_REQUEST,)
+        shopping_list = []
+
+        for ingredient in ingredients:
+            shopping_list.append(
+                f"{ingredient['ingredient__name']} "
+                f"({ingredient['ingredient__unit_of_measurement']}) - "
+                f"{ingredient['amount']}"
+            )
+
+        return '\n'.join(shopping_list)
 
     @action(
         methods=['GET'],
@@ -141,27 +177,17 @@ class RecipeViewSet(ModelViewSet):
         Метод скачивания списка покупок для всех рецептов,
         которые добавлены в список покупок пользователя.
         """
-        ingredients = RecipeIngredient.objects.filter(
-            recipe__shopping_list__user=request.user
-        ).order_by('ingredient__name').values(
-            'ingredient__name', 'ingredient__unit_of_measurement'
-        ).annotate(amount=sum('amount'))
-        shopping_list = 'Список покупок:'
+        user = request.user
+        shopping_list = self.get_shopping_list(user)
 
-        for ingredient in ingredients:
-            shopping_list.append(
-                f"{ingredient['ingredient__name']} "
-                f"({ingredient['ingredient__unit_of_measurement']}) - "
-                f"{ingredient['amount']}"
-            )
+        # создаем временный файл для загрузки
+        with TemporaryFile() as file:
+            file.write(shopping_list.encode())
+            file.seek(0)
 
-        shopping_list = '\n'.join(shopping_list)
+            response = FileResponse(file, filename='shopping_list.txt')
+            response['Content-Disposition'] = '''attachment;
+                                                filename="shopping_list.txt"'''
+            response['Content-Length'] = file.tell()
 
-        file = 'shopping_list.txt'
-        file_content = shopping_list.encode('utf-8')
-
-        response = HttpResponse(file_content, content_type='text/plain')
-        response['Content-Disposition'] = f'attachment; filename="{file}.txt"'
-        response['Content-Length'] = len(file_content)
-
-        return response
+            return response

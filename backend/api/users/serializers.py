@@ -1,26 +1,21 @@
 from django.contrib.auth import get_user_model
-from djoser.serializers import UserCreateSerializer, UserSerializer
+from djoser.serializers import \
+    UserCreateSerializer as DjoserUserCreateSerializer
+from djoser.serializers import UserSerializer as DjoserUserSerialiser
 from rest_framework import serializers
 
 from recipes.models import Subscription
 
-
 User = get_user_model()
 
 
-class CustomUserSerializer(UserSerializer):
+class UserSerializer(DjoserUserSerialiser):
     """Сериализатор модели User. Валидация username, email."""
 
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name',
                   'role', 'password')
-
-    def validate_username(self, value):
-        """Метод проверки значения me зарегестрированного системой."""
-        if value == 'me':
-            raise serializers.ValidationError('me зарегистрировано системой')
-        return value
 
     def validate_email(self, value):
         """Метод проверки зарегистрированного Email."""
@@ -39,16 +34,10 @@ class CustomUserSerializer(UserSerializer):
         ).exists()
 
 
-class CreateUserSerializer(UserCreateSerializer):
+class UserCreateSerializer(DjoserUserCreateSerializer):
     """Сериализатор создания User."""
 
     class Meta:
         fields = ('username', 'password', 'email',
                   'first_name', 'last_name',)
         model = User
-
-    def validate_username(self, value):
-        """Метод проверки значения me зарегестрированного системой."""
-        if value == 'me':
-            raise serializers.ValidationError('me зарегистрировано системой')
-        return value

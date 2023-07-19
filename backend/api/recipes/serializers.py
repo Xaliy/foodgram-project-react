@@ -1,14 +1,14 @@
 from django.db import transaction
-
-from djoser.serializers import UserSerializer
-
+from django.db.models import Exists, OuterRef
+from djoser.serializers import UserSerializer as DjoserUserSerialiser
 from rest_framework import validators
 from rest_framework.exceptions import NotFound, PermissionDenied
-from rest_framework.serializers import (IntegerField, ModelSerializer,
+from rest_framework.serializers import (BooleanField, IntegerField,
+                                        ModelSerializer,
                                         PrimaryKeyRelatedField, ReadOnlyField,
-                                        SerializerMethodField, ValidationError)
+                                        ValidationError)
 
-from api.users.serializers import CustomUserSerializer
+from api.users.serializers import UserSerializer
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Subscription, Tag)
 
@@ -86,14 +86,14 @@ class RecipeSerializer(ModelSerializer):
     """
 
     tags = TagSerializer(read_only=True, many=True)
-    author = CustomUserSerializer(read_only=True)
+    author = UserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
         read_only=True,
         many=True,
-        source='ingredient_in_recipe'
+        source='ingredients'
     )
-    is_favorited = SerializerMethodField()
-    is_in_shopping_cart = SerializerMethodField()
+    is_favorited = BooleanField(read_only=True)
+    is_in_shopping_cart = BooleanField(read_only=True)
 
     class Meta:
         fields = (
@@ -123,15 +123,6 @@ class RecipeSerializer(ModelSerializer):
             return False
 
         return user.carts.filter(recipe=obj.id).exists()
-
-    def get_ingredients(self, obj):
-        """
-        Метод создает новый IngredientInRecipeSerializer экземпляр
-        и возвращает сериализованные данные.
-        """
-        ingredients = RecipeIngredient.objects.filter(recipe=obj)
-
-        return IngredientInRecipeSerializer(ingredients, many=True).data
 
 
 class RecipePostSerializer(ModelSerializer):
@@ -234,7 +225,7 @@ class UserSubscribeSerializer(ModelSerializer):
     subscribe и subscriptions.
     """
 
-    author = UserSerializer(read_only=True)
+    author = DjoserUserSerialiser(read_only=True)
 
     class Meta:
         model = Subscription
@@ -266,13 +257,29 @@ class ShoppingCartSerializer(ModelSerializer):
         model = ShoppingCart
         fields = ('user', 'recipe',)
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        if self.context['request'].user.is_authenticated:
+            is_in_shopping_cart_subquery = ShoppingCart.objects.filter(
+                user=self.context['request'].user,
+                recipe=OuterRef('recipe')
+            ).values('id')[:1]
+
+            queryset = queryset.annotate(
+                is_in_shopping_cart=Exists(is_in_shopping_cart_subquery)
+            )
+
+        return queryset
+
     def validate(self, data):
         """
         Проверяет, что рецепт не был добавлен ранее.
         """
-        if ShoppingCart.objects.filter(user=data['user'],
-                                       recipe=data['recipe']
-                                       ).exists():
+        queryset = self.get_queryset()
+
+        if queryset.filter(recipe=data['recipe']
+                           ).filter(is_in_shopping_cart=True).exists():
             raise ValidationError('Рецепт уже добавлен в корзину.')
 
         return data

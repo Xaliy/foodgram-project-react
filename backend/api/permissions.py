@@ -1,18 +1,24 @@
 from rest_framework import permissions
 
 
-class IsAdminAuthorOrReadOnly(permissions.BasePermission):
+class IsAdminOrReadOnly(permissions.BasePermission):
     """
-    Класс разрешений предоставляет доступ на чтение и запись
-    зарегестрированным пользователям, которые являются
-    или автором объекта или админом, а также доступ только
-    для чтения пользователям, неаутентифицированным,
-    или не автор и не админ.
+    Класс предоставляет доступ только пользователям с правами
+    администратора на все методы запроса.
+    Неаутентифицированным разрешен только доступ на чтение.
     """
 
     def has_permission(self, request, view):
         return (request.method in permissions.SAFE_METHODS
-                or request.user.is_authenticated)
+                or request.user.is_authenticated
+                and request.user.is_superuser)
+
+
+class IsAuthor(permissions.BasePermission):
+    """
+    Класс проверяет является ли пользователь автором, если да, то
+    разрешает действия. В противном случае доступ запрещен.
+    """
 
     def has_object_permission(self, request, view, obj):
         return (request.method in permissions.SAFE_METHODS
@@ -23,7 +29,6 @@ class IsAdminAuthorOrReadOnly(permissions.BasePermission):
 class IsAdmin(permissions.BasePermission):
     """
     Класс разрешений предоставляет доступ только пользователям,
-    прошедшим проверку подлинности и
     являющимся аутентифицированным администратором.
     """
     def has_permission(self, request, view):

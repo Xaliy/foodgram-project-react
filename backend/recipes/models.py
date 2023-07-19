@@ -28,7 +28,7 @@ class Tag(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Teg'
+        verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
         ordering = ('name',)
 
@@ -109,7 +109,7 @@ class Recipe(models.Model):
 
     class Meta:
         verbose_name = 'Рецепт'
-        verbose_name_plural = 'Рецепты'
+        verbose_name_plural = 'Список рецептов'
         ordering = ('-pub_date', )
 
     def __str__(self):
@@ -122,11 +122,13 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
+        related_name='recipe_ingredients',
         verbose_name='Рецепт'
     )
     ingredients = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
+        related_name='ingredients',
         verbose_name='Ингредиент'
     )
     amount = models.PositiveSmallIntegerField(
@@ -186,21 +188,20 @@ class ShoppingCart(models.Model):
         on_delete=models.CASCADE,
         related_name='shopping_list'
     )
-    ingredient = models.ForeignKey(
-        Ingredient,
-        on_delete=models.CASCADE
-    )
 
     class Meta:
         ordering = ('-id',)
-        verbose_name = 'Покупка'
-        verbose_name_plural = 'Покупки'
+        verbose_name = 'Корзина'
+        verbose_name_plural = 'Корзины'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
                 name='unique_shoppingcart_recipe_user',
             ),
         ]
+
+    def __str__(self):
+        return f'Рецепт {self.user} в избранном {self.recipe}'
 
 
 class Subscription(models.Model):
@@ -209,14 +210,14 @@ class Subscription(models.Model):
     user = models.ForeignKey(
         User,
         verbose_name='Подписчик',
-        related_name='user_subscriptions',
+        related_name='subscriptions',
         on_delete=models.CASCADE,
         help_text='Данный пользователь станет подписчиком автора'
     )
     author = models.ForeignKey(
         User,
         verbose_name='Подписка автор',
-        related_name='author_subscriptions',
+        related_name='subscribers',
         on_delete=models.CASCADE,
         help_text='На автора могут подписаться другие пользователи',
     )

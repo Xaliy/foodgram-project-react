@@ -1,21 +1,23 @@
-import sys
 import os
+import sys
 from pathlib import Path
-from dotenv import load_dotenv
 
+from dotenv import find_dotenv, load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
-SECRET_KEY = str(os.getenv('SECRET_KEY'))
+# SECRET_KEY = str(os.getenv('SECRET_KEY'), 'None')
+SECRET_KEY = str(os.getenv('SECRET_KEY', default='None'))
 
 if not SECRET_KEY:
     sys.exit(-1)
 
-DEBUG = True
+# DEBUG = True
+DEBUG = os.getenv('DEBUG', default='True')
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = str(os.getenv('ALLOWED_HOSTS', default=['*']))
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -24,10 +26,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'rest_framework',
     'rest_framework.authtoken',  # по токену
+
     'djoser',
     'django_filters',
+
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
     'recipes.apps.RecipesConfig',
@@ -68,15 +73,17 @@ WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        # 'ENGINE': os.getenv('DB_ENGINE',
-        #                     default="django.db.backends.postgresql"),
-        # 'NAME': os.getenv('DB_NAME', default="postgres"),
-        # 'USER': os.getenv('POSTGRES_USER', default="postgres"),
-        # 'PASSWORD': os.getenv('POSTGRES_PASSWORD', default="postgres"),
-        # 'HOST': os.getenv('DB_HOST', default="db"),
-        # 'PORT': os.getenv('DB_PORT', default="5432")
+        # для базы sqlite
+        # 'ENGINE': 'django.db.backends.sqlite3',
+        # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        # для postgresql
+        'ENGINE': os.getenv('DB_ENGINE',
+                            default="django.db.backends.postgresql"),
+        'NAME': os.getenv('DB_NAME', default="postgres"),
+        'USER': os.getenv('POSTGRES_USER', default="postgres"),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', default="postgres"),
+        'HOST': os.getenv('DB_HOST', default="db"),
+        'PORT': os.getenv('DB_PORT', default="5432")
     }
 }
 
@@ -127,7 +134,7 @@ REST_FRAMEWORK = {
 AUTH_USER_MODEL = 'users.User'
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
-DEFAULT_FROM_EMAIL = 'test@test.com'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', default='test@test.com')
 DEFAULT_FIELD_SIZE = 50
 
 STATIC_URL = '/static/'
@@ -143,14 +150,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # }
 
 DJOSER = {
-    "HIDE_USERS": False,
-    "LOGIN_FIELD": "email",
-    "SERIALIZERS": {
-        'user_create': 'api.users.serializers.CustomUserCreateSerializer',
-        'user': 'api.users.serializers.CustomUserSerializer',
-        'current_user': 'api.users.serializers.CustomUserSerializer',
+    'HIDE_USERS': False,
+    'LOGIN_FIELD': 'email',
+    'SERIALIZERS': {
+        'user_create': 'api.users.serializers.UserCreateSerializer',
+        'user': 'api.users.serializers.UserSerializer',
+        'current_user': 'api.users.serializers.UserSerializer',
     },
-    "PERMISSIONS": {
+    'PERMISSIONS': {
         'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
         'user_list': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
     },

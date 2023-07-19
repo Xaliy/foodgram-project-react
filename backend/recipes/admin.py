@@ -18,7 +18,7 @@ class TagsAdmin(admin.ModelAdmin):
 class IngredientAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'unit_of_measurement')
     search_fields = ('name',)
-    list_filter = ('name',)
+    list_filter = ('name', 'unit_of_measurement')
 
     def unit_of_measurement(self, obj):
         return obj.unit_of_measurement
@@ -40,7 +40,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'pub_date',
     )
     inlines = (RecipeIngredientAdmin,)
-    search_fields = ('name', 'author')
+    search_fields = ('name',)
     list_filter = ('author', 'name', 'tags',)
     readonly_fields = ('favorites',)
 
