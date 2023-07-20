@@ -148,8 +148,8 @@ class RecipePostSerializer(ModelSerializer):
         for ingredient_data in ingredients:
             ingredient_list_in_recipe.append(
                 RecipeIngredient(
-                    ingredient=ingredient_data.pop('id'),
-                    amount=ingredient_data.pop('amount'),
+                    ingredient=ingredient_data['id'],
+                    amount=ingredient_data['amount'],
                     recipe=recipe,
                 )
             )
@@ -163,8 +163,8 @@ class RecipePostSerializer(ModelSerializer):
             raise PermissionDenied(
                 detail='Вы должны быть зарегистрированы, чтобы создать рецепт.'
             )
-        tags = validated_data.pop('tags')
-        ingredients = validated_data.pop('ingredients')
+        tags = validated_data['tags']
+        ingredients = validated_data['ingredients']
         recipe = Recipe.objects.create(author=request.user, **validated_data)
         recipe.tags.set(tags)
         self.add_ingredients(ingredients, recipe)
@@ -178,7 +178,7 @@ class RecipePostSerializer(ModelSerializer):
             raise NotFound(detail='Рецепт не найден')
         tags = validated_data.get('tags', instance.tags)
         instance.tags.set(tags)
-        ingredients = validated_data.pop('ingredients', None)
+        ingredients = validated_data['ingredients']
         if ingredients is not None:
             instance.ingredients.clear()
             self.add_ingredients(ingredients, instance)
@@ -261,10 +261,12 @@ class ShoppingCartSerializer(ModelSerializer):
         queryset = super().get_queryset()
 
         if self.context['request'].user.is_authenticated:
-            is_in_shopping_cart_subquery = ShoppingCart.objects.filter(
-                user=self.context['request'].user,
-                recipe=OuterRef('recipe')
-            ).values('id')[:1]
+            is_in_shopping_cart_subquery = (
+                ShoppingCart.objects
+                .filter(user=self.context['request'].user,
+                        recipe=OuterRef('recipe'))
+                .values('id')[:1]
+            )
 
             queryset = queryset.annotate(
                 is_in_shopping_cart=Exists(is_in_shopping_cart_subquery)

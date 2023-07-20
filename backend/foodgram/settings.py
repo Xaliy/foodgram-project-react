@@ -1,21 +1,16 @@
 import os
-import sys
 from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(find_dotenv())
 
-# SECRET_KEY = str(os.getenv('SECRET_KEY'), 'None')
-SECRET_KEY = str(os.getenv('SECRET_KEY', default='None'))
+SECRET_KEY = os.getenv('SECRET_KEY', default='None')
 
-if not SECRET_KEY:
-    sys.exit(-1)
-
-# DEBUG = True
-DEBUG = os.getenv('DEBUG', default='True')
+DEBUG = False
 
 ALLOWED_HOSTS = str(os.getenv('ALLOWED_HOSTS', default=['*']))
 
@@ -73,34 +68,32 @@ WSGI_APPLICATION = 'foodgram.wsgi.application'
 
 DATABASES = {
     'default': {
-        # для базы sqlite
         # 'ENGINE': 'django.db.backends.sqlite3',
         # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        # для postgresql
         'ENGINE': os.getenv('DB_ENGINE',
-                            default="django.db.backends.postgresql"),
-        'NAME': os.getenv('DB_NAME', default="postgres"),
-        'USER': os.getenv('POSTGRES_USER', default="postgres"),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', default="postgres"),
-        'HOST': os.getenv('DB_HOST', default="db"),
-        'PORT': os.getenv('DB_PORT', default="5432")
+                            default='django.db.backends.postgresql'),
+        'NAME': os.getenv('DB_NAME', default='postgres'),
+        'USER': os.getenv('POSTGRES_USER', default='postgres'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', default='postgres'),
+        'HOST': os.getenv('DB_HOST', default='db'),
+        'PORT': os.getenv('DB_PORT', default='5432')
     }
 }
 
-AUTH_PWD_MODULE = "django.contrib.auth.password_validation."
+AUTH_PWD_MODULE = 'django.contrib.auth.password_validation.'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": f"{AUTH_PWD_MODULE}UserAttributeSimilarityValidator",
+        'NAME': f'{AUTH_PWD_MODULE}UserAttributeSimilarityValidator',
     },
     {
-        "NAME": f"{AUTH_PWD_MODULE}MinimumLengthValidator",
+        'NAME': f'{AUTH_PWD_MODULE}MinimumLengthValidator',
     },
     {
-        "NAME": f"{AUTH_PWD_MODULE}CommonPasswordValidator",
+        'NAME': f'{AUTH_PWD_MODULE}CommonPasswordValidator',
     },
     {
-        "NAME": f"{AUTH_PWD_MODULE}NumericPasswordValidator",
+        'NAME': f'{AUTH_PWD_MODULE}NumericPasswordValidator',
     },
 ]
 
@@ -133,16 +126,19 @@ REST_FRAMEWORK = {
 
 AUTH_USER_MODEL = 'users.User'
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
+EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', default='test@test.com')
 DEFAULT_FIELD_SIZE = 50
 
 STATIC_URL = '/static/'
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = BASE_DIR / 'static'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # SIMPLE_JWT = {
 #     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),

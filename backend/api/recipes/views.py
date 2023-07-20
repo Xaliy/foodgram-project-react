@@ -15,13 +15,14 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api.permissions import IsAdminOrReadOnly, IsAuthor
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+from recipes.models import (Favorite, Ingredient, Recipe,
                             ShoppingCart, Tag)
 
 from .filters import RecipeFilter
 from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
                           RecipePostSerializer, RecipeSerializer,
                           ShoppingCartSerializer, TagSerializer)
+from .services import get_shopping_list
 
 User = get_user_model()
 
@@ -49,7 +50,6 @@ class RecipeViewSet(ModelViewSet):
     Методы: выбор класса сериализатора,
     """
 
-    queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (IsAuthenticatedOrReadOnly,
                           IsAdminOrReadOnly, IsAuthor)
@@ -69,18 +69,19 @@ class RecipeViewSet(ModelViewSet):
         из базы данных и добавления в каждый объект дополнительных
         полей is_favorited и is_in_shopping_cart.
         """
-        queryset = super().get_queryset()
+        queryset = (Recipe.objects
+                    .select_related('author')
+                    .prefetch_related('ingredients', 'tags')
+                    .all())
         user = self.request.user
+        favorite_qs = Favorite.objects.filter(user=user,
+                                              recipe=OuterRef('id'))
+        shopping_cart_qs = ShoppingCart.objects.filter(user=user,
+                                                       recipe=OuterRef('id'))
         if user.is_authenticated:
             queryset = queryset.annotate(
-                is_favorited=Exists(
-                    Favorite.objects.filter(user=user,
-                                            recipe=OuterRef('id'))
-                ),
-                is_in_shopping_cart=Exists(
-                    ShoppingCart.objects.filter(user=user,
-                                                recipe=OuterRef('id'))
-                )
+                is_favorited=Exists(favorite_qs),
+                is_in_shopping_cart=Exists(shopping_cart_qs)
             )
         return queryset
 
@@ -110,7 +111,9 @@ class RecipeViewSet(ModelViewSet):
         """
         Метод добавляет рецепт в корзину.
         """
-        return self.add_to_list(request, pk, ShoppingCartSerializer,
+        return self.add_to_list(request,
+                                pk,
+                                ShoppingCartSerializer,
                                 ShoppingCart)
 
     @shopping_cart.mapping.delete
@@ -130,7 +133,9 @@ class RecipeViewSet(ModelViewSet):
     )
     def favorite(self, request, pk):
         """Метод добавляет рецепт в список избранных."""
-        return self.add_to_list(request, pk, FavoriteRecipeSerializer,
+        return self.add_to_list(request,
+                                pk,
+                                FavoriteRecipeSerializer,
                                 Favorite)
 
     @favorite.mapping.delete
@@ -143,30 +148,6 @@ class RecipeViewSet(ModelViewSet):
         return Response({'status': 'Рецепт удален из списка избранных'},
                         status=HTTPStatus.OK)
 
-    def get_shopping_list(user):
-        """
-        Функция для получения списока покупок пользователя.
-        Используется в методе download_shopping_cart.
-        """
-        ingredients = (
-            RecipeIngredient.objects
-            .filter(recipe__shopping_list__user=user)
-            .order_by('ingredient__name')
-            .values('ingredient__name', 'ingredient__unit_of_measurement')
-            .annotate(amount=sum('amount'))
-        )
-
-        shopping_list = []
-
-        for ingredient in ingredients:
-            shopping_list.append(
-                f"{ingredient['ingredient__name']} "
-                f"({ingredient['ingredient__unit_of_measurement']}) - "
-                f"{ingredient['amount']}"
-            )
-
-        return '\n'.join(shopping_list)
-
     @action(
         methods=['GET'],
         detail=False,
@@ -178,7 +159,7 @@ class RecipeViewSet(ModelViewSet):
         которые добавлены в список покупок пользователя.
         """
         user = request.user
-        shopping_list = self.get_shopping_list(user)
+        shopping_list = get_shopping_list(user)
 
         # создаем временный файл для загрузки
         with TemporaryFile() as file:
