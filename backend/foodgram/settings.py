@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 
+from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 
 
@@ -10,7 +10,7 @@ load_dotenv(find_dotenv())
 
 SECRET_KEY = os.getenv('SECRET_KEY', default='None')
 
-DEBUG = False
+DEBUG = bool(os.getenv('DEBUG', False))
 
 ALLOWED_HOSTS = str(os.getenv('ALLOWED_HOSTS', default=['*']))
 
