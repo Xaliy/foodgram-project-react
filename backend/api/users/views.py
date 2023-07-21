@@ -43,7 +43,7 @@ class UsersViewSet(UserViewSet):
                     author=OuterRef('id')
                 )
             )
-        ).all()
+        )
         return queryset
 
     @action(
@@ -68,25 +68,23 @@ class UsersViewSet(UserViewSet):
 
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
-    @action(
-        detail=True,
-        methods=['DELETE'],
-        permission_classes=[IsAuthenticated]
-    )
-    def delete_subscription(self, request, id):
+    @create_subscription.mapping.delete
+    def delete_subscription(self, request, pk):
         """Метод удаления подписки на других авторов."""
-        author = get_object_or_404(User, id=id)
+        author = get_object_or_404(User, pk=pk)
 
-        if Subscription.objects.filter(user=request.user,
-                                       author=author).exists():
-            Subscription.objects.filter(user=request.user,
-                                        author=author).delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        else:
+        subscription_db = Subscription.objects.filter(user=request.user,
+                                                      author=author)
+
+        if subscription_db.exists():
+            subscription_db.delete()
+
             return Response(
-                {'errors': 'Вы не подписаны на данного автора'},
-                status=HTTPStatus.BAD_REQUEST
-            )
+                {'status': f'Подписка на автора {author.username} удалена'},
+                status=HTTPStatus.OK)
+
+        return Response({'errors': 'Вы не подписаны на данного автора'},
+                        status=HTTPStatus.BAD_REQUEST)
 
     @action(
         detail=False,

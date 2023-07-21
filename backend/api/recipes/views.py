@@ -69,10 +69,11 @@ class RecipeViewSet(ModelViewSet):
         из базы данных и добавления в каждый объект дополнительных
         полей is_favorited и is_in_shopping_cart.
         """
-        queryset = (Recipe.objects
-                    .select_related('author')
-                    .prefetch_related('ingredients', 'tags')
-                    .all())
+        queryset = (
+            Recipe.objects
+            .select_related('author')
+            .prefetch_related('ingredients', 'tags')
+        )
         user = self.request.user
         favorite_qs = Favorite.objects.filter(user=user,
                                               recipe=OuterRef('id'))
@@ -83,6 +84,7 @@ class RecipeViewSet(ModelViewSet):
                 is_favorited=Exists(favorite_qs),
                 is_in_shopping_cart=Exists(shopping_cart_qs)
             )
+
         return queryset
 
     def add_to_list(request, pk, serializer_class, model_class):
@@ -102,15 +104,26 @@ class RecipeViewSet(ModelViewSet):
 
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
+    def remove_from_list(self, request, pk, Model, message):
+        """
+        Метод удаляет рецепт из списка.
+        Используется в методах remove_from_cart и remove_from_favorite.
+        """
+
+        user = request.user
+        recipe = get_object_or_404(Recipe, id=pk)
+        Model.objects.filter(user=user,
+                             recipe=recipe).delete()
+
+        return Response({'status': message}, status=HTTPStatus.OK)
+
     @action(
         detail=True,
         methods=['POST'],
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk):
-        """
-        Метод добавляет рецепт в корзину.
-        """
+        """Метод добавляет рецепт в корзину."""
         return self.add_to_list(request,
                                 pk,
                                 ShoppingCartSerializer,
@@ -119,12 +132,10 @@ class RecipeViewSet(ModelViewSet):
     @shopping_cart.mapping.delete
     def remove_from_cart(self, request, pk):
         """Метод удаляет рецепт из корзины."""
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        ShoppingCart.objects.filter(user=user, recipe=recipe).delete()
-
-        return Response({'status': 'Рецепт удален из корзины'},
-                        status=HTTPStatus.OK)
+        return self.remove_from_list(request,
+                                     pk,
+                                     ShoppingCart,
+                                     'Рецепт удален из корзины')
 
     @action(
         detail=True,
@@ -141,12 +152,10 @@ class RecipeViewSet(ModelViewSet):
     @favorite.mapping.delete
     def remove_from_favorite(self, request, pk):
         """Метод удаляет рецепт из списка избранных."""
-        user = request.user
-        recipe = get_object_or_404(Recipe, id=pk)
-        Favorite.objects.filter(user=user, recipe=recipe).delete()
-
-        return Response({'status': 'Рецепт удален из списка избранных'},
-                        status=HTTPStatus.OK)
+        return self.remove_from_list(request,
+                                     pk,
+                                     Favorite,
+                                     'Рецепт удален из списка избранных')
 
     @action(
         methods=['GET'],

@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
-from djoser.serializers import \
+from djoser.serializers import (
     UserCreateSerializer as DjoserUserCreateSerializer
+)
 from djoser.serializers import UserSerializer as DjoserUserSerialiser
 from rest_framework import serializers
 

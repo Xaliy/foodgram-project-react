@@ -10,9 +10,10 @@ load_dotenv(find_dotenv())
 
 SECRET_KEY = os.getenv('SECRET_KEY', default='None')
 
-DEBUG = bool(os.getenv('DEBUG', False))
+DEBUG = bool(os.environ.get('DEBUG', True))
+# DEBUG = False
 
-ALLOWED_HOSTS = str(os.getenv('ALLOWED_HOSTS', default=['*']))
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*', ])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -132,12 +133,10 @@ DEFAULT_FIELD_SIZE = 50
 
 STATIC_URL = '/static/'
 
-# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_ROOT = BASE_DIR / 'static'
 
 MEDIA_URL = '/media/'
 
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # SIMPLE_JWT = {

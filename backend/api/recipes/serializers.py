@@ -92,8 +92,8 @@ class RecipeSerializer(ModelSerializer):
         many=True,
         source='ingredients'
     )
-    is_favorited = BooleanField(read_only=True)
-    is_in_shopping_cart = BooleanField(read_only=True)
+    is_favorited = BooleanField(read_only=True, default=False)
+    is_in_shopping_cart = BooleanField(read_only=True, default=False)
 
     class Meta:
         fields = (
@@ -101,28 +101,6 @@ class RecipeSerializer(ModelSerializer):
             'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time',
         )
         model = Recipe
-
-    def get_is_favorited(self, obj):
-        """
-        Метод добавления рецепта в избранное.
-        Если пользователь авторизован и добавил рецепт в избранное.
-        """
-        user = self.context.get('request').user
-        if user.is_anonymous:
-            return False
-
-        return user.favorite.filter(recipe=obj.id).exists()
-
-    def get_is_in_shopping_cart(self, obj):
-        """
-        Метод если пользователь авторизован проверяет
-        есть ли рецепт в корзине.
-        """
-        user = self.context.get('request').user
-        if user.is_anonymous:
-            return False
-
-        return user.carts.filter(recipe=obj.id).exists()
 
 
 class RecipePostSerializer(ModelSerializer):
@@ -258,18 +236,21 @@ class ShoppingCartSerializer(ModelSerializer):
         fields = ('user', 'recipe',)
 
     def get_queryset(self):
+        """
+        Метод переопределяет стандартный метод get_queryset() модели.
+        ДОбавляем дополнительное поле is_in_shopping_cart,
+        которое указывает, находится ли рецепт в корзине покупок пользователя.
+        """
         queryset = super().get_queryset()
 
         if self.context['request'].user.is_authenticated:
-            is_in_shopping_cart_subquery = (
-                ShoppingCart.objects
-                .filter(user=self.context['request'].user,
-                        recipe=OuterRef('recipe'))
-                .values('id')[:1]
-            )
-
             queryset = queryset.annotate(
-                is_in_shopping_cart=Exists(is_in_shopping_cart_subquery)
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.filter(
+                        user=self.context['request'].user,
+                        recipe_id=OuterRef('pk')
+                    )
+                )
             )
 
         return queryset
