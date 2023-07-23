@@ -137,10 +137,6 @@ class RecipePostSerializer(ModelSerializer):
     def create(self, validated_data):
         """Атомарный метод создания рецепта с ингридиентами."""
         request = self.context.get('request', None)
-        if not request.user.is_authenticated:
-            raise PermissionDenied(
-                detail='Вы должны быть зарегистрированы, чтобы создать рецепт.'
-            )
         tags = validated_data['tags']
         ingredients = validated_data['ingredients']
         recipe = Recipe.objects.create(author=request.user, **validated_data)
@@ -189,12 +185,6 @@ class FavoriteRecipeSerializer(ModelSerializer):
             )
         ]
 
-    def create(self, validated_data):
-        """
-        Создает новый объект модели Favorite.
-        """
-        return Favorite.objects.create(**validated_data)
-
 
 class UserSubscribeSerializer(ModelSerializer):
     """
@@ -229,7 +219,8 @@ class UserSubscribeSerializer(ModelSerializer):
 class ShoppingCartSerializer(ModelSerializer):
     """
     Предаставление модели ShoppingCart.
-    Используется в прендставлении RecipeViewSet в методе shopping_cart."""
+    Используется в прендставлении RecipeViewSet в методе shopping_cart.
+    """
 
     class Meta:
         model = ShoppingCart
@@ -243,11 +234,11 @@ class ShoppingCartSerializer(ModelSerializer):
         """
         queryset = super().get_queryset()
 
-        if self.context['request'].user.is_authenticated:
+        if self.context['request'].auth:
             queryset = queryset.annotate(
                 is_in_shopping_cart=Exists(
                     ShoppingCart.objects.filter(
-                        user=self.context['request'].user,
+                        user=self.context['request'].auth.user,
                         recipe_id=OuterRef('pk')
                     )
                 )
@@ -259,10 +250,9 @@ class ShoppingCartSerializer(ModelSerializer):
         """
         Проверяет, что рецепт не был добавлен ранее.
         """
-        queryset = self.get_queryset()
-
-        if queryset.filter(recipe=data['recipe']
-                           ).filter(is_in_shopping_cart=True).exists():
+        if self.get_queryset().filter(recipe=data['recipe'],
+                                      is_in_shopping_cart=True
+                                      ).exists():
             raise ValidationError('Рецепт уже добавлен в корзину.')
 
         return data
