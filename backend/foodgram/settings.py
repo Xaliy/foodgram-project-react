@@ -11,9 +11,11 @@ load_dotenv(find_dotenv())
 SECRET_KEY = os.getenv('SECRET_KEY', default='None')
 
 # DEBUG = bool(os.environ.get('DEBUG', True))  # на подумать
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+# DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = True
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*', ])
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*', ])
+ALLOWED_HOSTS = ['*']
 
 
 INSTALLED_APPS = [

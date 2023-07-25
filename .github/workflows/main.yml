@@ -104,8 +104,8 @@ jobs:
             
             rm -f .env
             touch .env
-            echo 'ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}' >> .env
-            echo 'DEBUG=${{ secrets.DEBUG }}' >> .env
+            echo 'ALLOWED_HOSTS=['*']' >> .env
+            echo 'DEBUG=True' >> .env
             echo 'SECRET_KEY=${{ secrets.SECRET_KEY }}' >> .env
             echo 'DB_ENGINE=${{ secrets.DB_ENGINE }}' >> .env
             echo 'DB_NAME=${{ secrets.DB_NAME }}' >> .env
@@ -115,3 +115,4 @@ jobs:
             echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env
 
             sudo docker-compose up -d
+
