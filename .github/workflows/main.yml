@@ -100,6 +100,7 @@ jobs:
           script: |
             sudo docker pull xaliy/frontend:latest
             sudo docker pull xaliy/backend:latest
+            sudo docker-compose stop
             
             rm -f .env
             touch .env
@@ -114,6 +115,5 @@ jobs:
             echo 'DB_PORT=${{ secrets.DB_PORT }}' >> .env
 
             sudo docker-compose up -d
-            sudo docker-compose exec backend python manage.py migrate
-            sudo docker-compose exec backend python manage.py collectstatic --no-input
-
+            sudo docker-compose exec -T web python manage.py makemigrations
+            sudo docker-compose exec -T web python manage.py migrate
