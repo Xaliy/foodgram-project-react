@@ -98,9 +98,8 @@ jobs:
           target: "foodgram-project-react"
 
           script: |
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/frontend:latest
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/backend:latest
-            sudo docker-compose stop
+            sudo docker pull xaliy/frontend:latest
+            sudo docker pull xaliy/backend:latest
             
             rm -f .env
             touch .env
