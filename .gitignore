@@ -8,6 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+main_copy3.yml
 main_copy2.yml
 main_copy.yml
 build/
