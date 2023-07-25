@@ -1,10 +1,10 @@
 version: '3.3'
-services:
 
+services:
   db:
     image: postgres:13.0-alpine
     volumes:
-      - /var/lib/postgresql/data/
+      - db_value:/var/lib/postgresql/data/
     depends_on:
       - frontend
     env_file:
@@ -18,8 +18,6 @@ services:
   backend:
     image: xaliy/backend:latest
     restart: always
-    # expose:
-    #   - 8000
     volumes:
       - static_value:/app/static/
       - media_value:/app/media/
