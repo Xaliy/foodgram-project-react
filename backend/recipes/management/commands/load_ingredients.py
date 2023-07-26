@@ -15,7 +15,7 @@ class Command(BaseCommand):
         # with open(f'{FILES_DIR}/foodgram-project-react/data/ingredients.csv',
         #           'r', encoding='utf-8') as file:
         with open('recipes/data/ingredients.csv',
-                  'r', encoding='utf-8') as file:     
+                  'r', encoding='utf-8') as file:
             file_reader = csv.reader(file)
             next(file_reader)
 
