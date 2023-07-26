@@ -1,16 +1,16 @@
 from django.urls import include, path
 
-from .views import UserListView, UserSubscriptionView
+from .views import SubscribeView, SubscriptionsView
 
 urlpatterns = [
     path(
-        'users/<int:id>/subscribe/',
-        UserListView.as_view(),
+        'users/<id>/subscribe/',
+        SubscribeView.as_view(),
         name='subscribe'
     ),
     path(
         'users/subscriptions/',
-        UserSubscriptionView.as_view(),
+        SubscriptionsView.as_view(),
         name='subscriptions'
     ),
     path('auth/', include('djoser.urls.authtoken')),

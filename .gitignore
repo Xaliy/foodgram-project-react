@@ -8,6 +8,8 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+serializers_copy2.py
+views_copy2.py
 views_copy1.py
 main_copy3.yml
 main_copy2.yml

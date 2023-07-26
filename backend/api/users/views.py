@@ -1,58 +1,21 @@
-from api.recipes.serializers import UserSubscribeSerializer
 from django.contrib.auth import get_user_model
-from django.db.models import Exists, OuterRef
+from django.shortcuts import get_object_or_404
 from recipes.models import Subscription
-from rest_framework import filters, generics, status
-from rest_framework.exceptions import ValidationError
-from rest_framework.generics import get_object_or_404
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework import status
+from rest_framework.generics import ListAPIView
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import UserSerializer
+from .serializers import UserSerializer, ReadSubscriptionsSerializer
 
 User = get_user_model()
 
 
-class UserListView(generics.ListAPIView):
-    """Список пользователей."""
-
-    serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
-    pagination_class = LimitOffsetPagination
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['username']
-
-    def get_queryset(self):
-        """
-        Метод используется для получения списка пользователей
-        в ответе на запрос. Приобразовываем базовый get_queryset()
-        и добавляем флаг is_subscribed для каждого пользователя.
-        """
-        queryset = User.objects.annotate(
-            is_subscribed=Exists(
-                Subscription.objects.filter(
-                    user=self.request.user,
-                    author=OuterRef('id')
-                )
-            )
-        )
-        return queryset
-
-
-class UserSubscriptionView(APIView):
-    """Подписки пользователя."""
+class SubscribeView(APIView):
+    """Подписка на авторов."""
 
     permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        """Метод список подписок пользоваетеля. Subscriptions."""
-        queryset = Subscription.objects.filter(user=request.user)
-        serializer = UserSubscribeSerializer(
-            queryset, many=True, context={'request': request}
-        )
-        return Response(serializer.data)
 
     def post(self, request, id):
         """Метод создания подписки на других авторов. Subscribe."""
@@ -60,9 +23,9 @@ class UserSubscriptionView(APIView):
 
         if request.user.id == author.id:
             if request.user.id == author.id:
-                raise ValidationError('Запрещена подписка на самого себя')
+                raise Response(status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = UserSubscribeSerializer(
+        serializer = UserSerializer(
             Subscription.objects.create(
                 user=request.user,
                 author=author
@@ -93,3 +56,19 @@ class UserSubscriptionView(APIView):
             {'errors': 'Вы не подписаны на данного автора'},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class SubscriptionsView(ListAPIView):
+    """Список подписок пользователя. Subscriptions."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = ReadSubscriptionsSerializer
+
+    def get_queryset(self):
+        """Метод список подписок пользоваетеля. Subscriptions."""
+        return Subscription.objects.filter(user=self.request.user)
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

@@ -10,19 +10,14 @@ User = get_user_model()
 
 
 class UserSerializer(DjoserUserSerialiser):
-    """Сериализатор модели User. Валидация username, email."""
+    """Сериализатор модели User создания пользователя."""
+
+    is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'first_name', 'last_name',
-                  'role', 'password')
-
-    def validate_email(self, value):
-        """Метод проверки зарегистрированного Email."""
-        norm_email = value.lower()
-        if User.objects.filter(email=norm_email).exists():
-            raise serializers.ValidationError('Email уже зарегистрирован')
-        return norm_email
+        fields = ('id', 'username', 'email', 'first_name',
+                  'last_name', 'is_subscribed')
 
     def get_is_subscribed(self, obj):
         """Метод наличия подписки на пользователя модели Subscription."""
@@ -38,6 +33,39 @@ class UserCreateSerializer(DjoserUserCreateSerializer):
     """Сериализатор создания User."""
 
     class Meta:
-        fields = ('username', 'password', 'email',
-                  'first_name', 'last_name',)
         model = User
+        fields = ('username', 'password', 'email',
+                  'first_name', 'last_name')
+
+    def validate_email(self, value):
+        """Метод проверки зарегистрированного Email."""
+        norm_email = value.lower()
+        if User.objects.filter(email=norm_email).exists():
+            raise serializers.ValidationError('Email уже зарегистрирован')
+        return norm_email
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('me зарегистрировано системой')
+        return value
+
+
+class ReadSubscriptionsSerializer(serializers.ModelSerializer):
+    """Сериализатор для отображения подписок пользователя Subscription."""
+
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+    is_subscribed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'first_name', 'last_name',
+                  'is_subscribed', 'recipes', 'recipes_count')
+
+    def get_is_subscribed(self, obj):
+        request = self.context.get('request')
+        if request is None or request.user.is_anonymous:
+            return False
+        return Subscription.objects.filter(
+            user=request.user, author=obj
+        ).exists()
