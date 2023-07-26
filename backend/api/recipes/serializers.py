@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Exists, OuterRef
 from djoser.serializers import UserSerializer as DjoserUserSerialiser
 from rest_framework import validators
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound
 from rest_framework.serializers import (BooleanField, IntegerField,
                                         ModelSerializer,
                                         PrimaryKeyRelatedField, ReadOnlyField,

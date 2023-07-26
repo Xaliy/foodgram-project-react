@@ -1,17 +1,18 @@
 from django.urls import include, path
-from rest_framework import routers
 
-from .views import UsersViewSet
-
-app_name = 'users'
-
-router_v_1 = routers.DefaultRouter()
-router_v_1.register('users', UsersViewSet, basename='users')
+from .views import UserListView, UserSubscriptionView
 
 urlpatterns = [
-    path('', include(router_v_1.urls)),
-    # path('auth/', include('djoser.urls')),
-    # path('auth/token/', include('djoser.urls.authtoken')),
+    path(
+        'users/<int:id>/subscribe/',
+        UserListView.as_view(),
+        name='subscribe'
+    ),
+    path(
+        'users/subscriptions/',
+        UserSubscriptionView.as_view(),
+        name='subscriptions'
+    ),
     path('auth/', include('djoser.urls.authtoken')),
     path('', include('djoser.urls')),
 ]
