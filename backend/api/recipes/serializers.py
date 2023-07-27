@@ -267,7 +267,7 @@ class ShoppingCartSerializer(ModelSerializer):
         ДОбавляем дополнительное поле is_in_shopping_cart,
         которое указывает, находится ли рецепт в корзине покупок пользователя.
         """
-        queryset = super().get_queryset()
+        queryset = ShoppingCart.objects.all()
 
         if self.context['request'].auth:
             queryset = queryset.annotate(
