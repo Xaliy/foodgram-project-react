@@ -217,7 +217,8 @@ class Subscription(models.Model):
     author = models.ForeignKey(
         User,
         verbose_name='Подписка автор',
-        related_name='subscribers',
+        related_name='author',
+        # related_name='subscribers',
         on_delete=models.CASCADE,
         help_text='На автора могут подписаться другие пользователи',
     )

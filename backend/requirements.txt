@@ -39,7 +39,7 @@ sqlparse==0.4.3
 toml==0.10.2
 uritemplate==4.1.1
 urllib3==1.26.14
-python-dotenv==0.20.0
+python-dotenv==0.21.1
 django-filter==22.1
 gunicorn==20.0.4
 psycopg2-binary==2.8.6
