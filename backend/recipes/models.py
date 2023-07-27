@@ -77,8 +77,8 @@ class Recipe(models.Model):
     image = models.ImageField(
         verbose_name='Изображение рецепта',
         upload_to='static/',
-        blank=True,
-        null=True
+        null=True,
+        default=None
     )
     text = models.TextField(
         verbose_name='Описание рецепта',
@@ -105,6 +105,7 @@ class Recipe(models.Model):
         Tag,
         verbose_name='Тег рецепта',
         related_name='recipes'
+        # related_name='tags'
     )
 
     class Meta:
@@ -122,14 +123,15 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='recipe_ingredients',
+        # related_name='recipe_ingredients',
         verbose_name='Рецепт'
     )
-    ingredients = models.ForeignKey(
+    ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        related_name='ingredients',
-        verbose_name='Ингредиент'
+        verbose_name='Ингредиент',
+        null=True,
+        default=None
     )
     amount = models.PositiveSmallIntegerField(
         verbose_name='Колличество ингредиентов',
@@ -140,7 +142,7 @@ class RecipeIngredient(models.Model):
     )
 
     def __str__(self):
-        return f"{self.ingredients} - {self.amount}"
+        return f"{self.ingredient} - {self.amount}"
 
 
 class Favorite(models.Model):
@@ -180,7 +182,7 @@ class ShoppingCart(models.Model):
         User,
         verbose_name='Пользователь',
         on_delete=models.CASCADE,
-        related_name='carts'
+        related_name='shopping_list'
     )
     recipe = models.ForeignKey(
         Recipe,
@@ -196,7 +198,7 @@ class ShoppingCart(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_shoppingcart_recipe_user',
+                name='user_shoppingcart_unique',
             ),
         ]
 
@@ -210,7 +212,7 @@ class Subscription(models.Model):
     user = models.ForeignKey(
         User,
         verbose_name='Подписчик',
-        related_name='subscriptions',
+        related_name='follower',
         on_delete=models.CASCADE,
         help_text='Данный пользователь станет подписчиком автора'
     )
