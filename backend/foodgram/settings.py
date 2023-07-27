@@ -26,14 +26,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
-    'rest_framework.authtoken',  # по токену
-
     'djoser',
-    'django_filters',
+    'rest_framework.authtoken',  # по токену
 
     'api.apps.ApiConfig',
     'users.apps.UsersConfig',
     'recipes.apps.RecipesConfig',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -156,6 +155,10 @@ DJOSER = {
     },
     'PERMISSIONS': {
         'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
-        'user_list': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+        # 'user_list': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+        'user_list': ['rest_framework.permissions.AllowAny'],
+        'username_reset': ['rest_framework.permissions.IsAdminUser'],
+        'username_reset_confirm': ['rest_framework.permissions.IsAdminUser'],
+        'user_delete': ['rest_framework.permissions.IsAdminUser'],
     },
 }

@@ -11,7 +11,7 @@ from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import (IsAuthenticated,
+from rest_framework.permissions import (AllowAny, IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
@@ -26,9 +26,9 @@ User = get_user_model()
 
 
 class TagViewSet(ReadOnlyModelViewSet):
-
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    permission_classes = [AllowAny, ]
     pagination_class = None
 
 
