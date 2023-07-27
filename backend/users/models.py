@@ -29,7 +29,7 @@ class User(AbstractUser):
             ),
         ]
 
-    def clean(self):
-        if self.username == 'me':
-            raise ValidationError('Имя me недоступно для регистрации')
-        super(User, self).clean()
+    # def clean(self):
+    #     if self.username == 'me':
+    #         raise ValidationError('Имя me недоступно для регистрации')
+    #     super(User, self).clean()
