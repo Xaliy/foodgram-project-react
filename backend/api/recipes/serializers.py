@@ -1,3 +1,4 @@
+from drf_extra_fields.fields import Base64ImageField
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from djoser.serializers import UserSerializer as DjoserUserSerialiser
@@ -141,6 +142,7 @@ class RecipePostSerializer(ModelSerializer):
 
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = IngredientInRecipeSerializer(many=True)
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
@@ -182,6 +184,7 @@ class RecipePostSerializer(ModelSerializer):
         tags = validated_data.get('tags', instance.tags)
         instance.tags.set(tags)
         ingredients = validated_data['ingredients']
+        instance.image = validated_data.get('image', instance.image)
         if ingredients is not None:
             instance.ingredients.clear()
             self.add_ingredients(ingredients, instance)

@@ -104,8 +104,8 @@ class Recipe(models.Model):
     tags = models.ManyToManyField(
         Tag,
         verbose_name='Тег рецепта',
-        related_name='recipes'
-        # related_name='tags'
+        # related_name='recipes'
+        related_name='tags'
     )
 
     class Meta:
