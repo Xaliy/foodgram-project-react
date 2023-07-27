@@ -1,7 +1,6 @@
 from http import HTTPStatus
 from tempfile import TemporaryFile
 
-from api.permissions import IsAdminOrReadOnly, IsAuthor
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
 from django.http import FileResponse
@@ -11,11 +10,11 @@ from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import (AllowAny, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
+from rest_framework.permissions import (AllowAny, IsAuthenticated)
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
+from api.permissions import IsAdminOrReadOnly, IsAuthor
 from .filters import RecipeFilter
 from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
                           RecipePostSerializer, RecipeSerializer,
@@ -33,7 +32,6 @@ class TagViewSet(ReadOnlyModelViewSet):
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
-
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = IsAdminOrReadOnly, IsAuthor
@@ -49,8 +47,7 @@ class RecipeViewSet(ModelViewSet):
     """
 
     serializer_class = RecipeSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,
-                          IsAdminOrReadOnly, IsAuthor)
+    permission_classes = (IsAuthor,)
     filter_backends = (DjangoFilterBackend, )
     filterset_class = RecipeFilter
     pagination_class = LimitOffsetPagination
