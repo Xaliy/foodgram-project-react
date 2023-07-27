@@ -1,16 +1,16 @@
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from djoser.serializers import UserSerializer as DjoserUserSerialiser
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Subscription, Tag)
 from rest_framework import validators
 from rest_framework.exceptions import NotFound
 from rest_framework.serializers import (BooleanField, IntegerField,
                                         ModelSerializer,
                                         PrimaryKeyRelatedField, ReadOnlyField,
-                                        ValidationError)
+                                        SerializerMethodField, ValidationError)
 
 from api.users.serializers import UserSerializer
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Subscription, Tag)
 
 
 class TagSerializer(ModelSerializer):
@@ -65,9 +65,10 @@ class IngredientInRecipeSerializer(ModelSerializer):
     В представлениях используется опосредованно через другие сериализаторы.
     """
 
-    id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    # id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    id = ReadOnlyField(source='ingredient.id')
     name = ReadOnlyField(source='ingredient.name')
-    measurement_unit = ReadOnlyField(
+    unit_of_measurement = ReadOnlyField(
         source='ingredient.unit_of_measurement'
     )
 
@@ -87,11 +88,12 @@ class RecipeSerializer(ModelSerializer):
 
     tags = TagSerializer(read_only=True, many=True)
     author = UserSerializer(read_only=True)
-    ingredients = RecipeIngredientSerializer(
-        read_only=True,
-        many=True,
-        source='ingredients'
-    )
+    # ingredients = RecipeIngredientSerializer(
+    #     read_only=True,
+    #     many=True,
+    #     source='ingredients'
+    # )
+    ingredients = SerializerMethodField()
     is_favorited = BooleanField(read_only=True, default=False)
     is_in_shopping_cart = BooleanField(read_only=True, default=False)
 
