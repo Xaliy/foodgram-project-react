@@ -163,9 +163,6 @@ class RecipePostSerializer(ModelSerializer):
                 )
             )
         RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
-        recipe.ingredients.set(
-            [i.ingredient for i in ingredient_list_in_recipe]
-        )
 
     @transaction.atomic
     def create(self, validated_data):

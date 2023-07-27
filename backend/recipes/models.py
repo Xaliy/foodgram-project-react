@@ -84,11 +84,11 @@ class Recipe(models.Model):
         verbose_name='Описание рецепта',
         blank=True
     )
-    ingredients = models.ManyToManyField(
-        Ingredient,  # класс
-        through='RecipeIngredient',  # уникальность
-        verbose_name='Список ингредиентов'
-    )
+    # ingredients = models.ManyToManyField(
+    #     Ingredient,  # класс
+    #     through='RecipeIngredient',  # уникальность
+    #     verbose_name='Список ингредиентов'
+    # )
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name='Время приготовления в минутах',
         validators=[
