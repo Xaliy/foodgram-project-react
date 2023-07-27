@@ -82,7 +82,7 @@ class RecipeViewSet(ModelViewSet):
 
         return queryset
 
-    def add_to_list(request, pk, serializer_class, model_class):
+    def add_to_list(self, request, pk, serializer_class, model_class):
         """
         Метод добавляет объект в список.
         Используется в методах shopping_cart и favorite.
