@@ -104,6 +104,32 @@ class RecipeSerializer(ModelSerializer):
         )
         model = Recipe
 
+    def get_ingredients(self, obj):
+        ingredients = RecipeIngredient.objects.select_related(
+            'recipe', 'ingredient'
+        ).filter(recipe=obj)
+        return RecipeIngredientSerializer(ingredients, many=True).data
+
+    def get_is_favorited(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Favorite.objects.select_related(
+                'user', 'recipe'
+            ).filter(
+                user=request.user, recipe_id=obj.id
+            ).exists()
+        return False
+
+    def get_is_in_shopping_cart(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return ShoppingCart.objects.select_related(
+                'user', 'recipe'
+            ).filter(
+                user=request.user, recipe_id=obj
+            ).exists()
+        return False
+
 
 class RecipePostSerializer(ModelSerializer):
     """
