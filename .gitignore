@@ -8,6 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+validators2.py
 serializers_copy2.py
 views_copy2.py
 views_copy1.py

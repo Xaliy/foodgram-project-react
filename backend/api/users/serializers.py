@@ -3,6 +3,7 @@ from djoser.serializers import (
     UserCreateSerializer as DjoserUserCreateSerializer
 )
 from djoser.serializers import UserSerializer as DjoserUserSerialiser
+from rest_framework.validators import UniqueTogetherValidator
 from recipes.models import Subscription
 from rest_framework import serializers
 
@@ -44,10 +45,10 @@ class UserCreateSerializer(DjoserUserCreateSerializer):
             raise serializers.ValidationError('Email уже зарегистрирован')
         return norm_email
 
-    def validate_username(self, value):
-        if value == 'me':
-            raise serializers.ValidationError('me зарегистрировано системой')
-        return value
+    # def validate_username(self, value):
+    #     if value == 'me':
+    #         raise serializers.ValidationError('me зарегистрировано системой')
+    #     return value
 
 
 class ReadSubscriptionsSerializer(serializers.ModelSerializer):
@@ -69,3 +70,22 @@ class ReadSubscriptionsSerializer(serializers.ModelSerializer):
         return Subscription.objects.filter(
             user=request.user, author=obj
         ).exists()
+
+
+class WriteSubscriptionSerializer(serializers.ModelSerializer):
+    """Сериализатор подписки  используем в SubscribeView."""
+
+    class Meta:
+        model = Subscription
+        fields = ('user', 'author')
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Subscription.objects.all(),
+                fields=['user', 'author'],
+            )
+        ]
+
+    def to_representation(self, instance):
+        return ReadSubscriptionsSerializer(instance.author, context={
+            'request': self.context.get('request')
+        }).data

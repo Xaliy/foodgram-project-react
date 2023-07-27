@@ -28,7 +28,7 @@ class SubscribeView(APIView):
         serializer = UserSerializer(
             Subscription.objects.create(
                 user=request.user,
-                author=author
+                author=id
             ),
             context={'request': request},
         )
@@ -68,7 +68,7 @@ class SubscriptionsView(ListAPIView):
         """Метод список подписок пользоваетеля. Subscriptions."""
         return Subscription.objects.filter(user=self.request.user)
 
-    def get(self, request, *args, **kwargs):
+    def get_subscriptions(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
