@@ -139,7 +139,7 @@ class RecipePostSerializer(ModelSerializer):
     Созданиеи-редактирование рецепта и добавление ингридиентов в рецепт.
     Используется в представлении RecipeViewSet для POST звпросов.
     """
-    
+
     id = ReadOnlyField()  # nen
     author = UserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
