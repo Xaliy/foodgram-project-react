@@ -1,8 +1,8 @@
 from http import HTTPStatus
-# from tempfile import TemporaryFile
+from tempfile import TemporaryFile
 
 from django.contrib.auth import get_user_model
-# from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef
 # from django.http import FileResponse
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
@@ -101,10 +101,6 @@ class RecipeViewSet(ModelViewSet):
             return Recipe.objects.filter(
                 shopping_cart__user=self.request.user)
         return Recipe.objects.all()
-
-    def perform_create(self, serializer):
-        author = self.request.user
-        serializer.save(author=author)
 
     def add_to_list(self, request, pk, serializer_class, model_class):
         """
