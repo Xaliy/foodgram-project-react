@@ -101,7 +101,7 @@ class RecipeViewSet(ModelViewSet):
             return Recipe.objects.filter(
                 shopping_cart__user=self.request.user)
         return Recipe.objects.all()
-    
+
     def perform_create(self, serializer):
         author = self.request.user
         serializer.save(author=author)
