@@ -18,8 +18,8 @@ class UserSerializer(DjoserUserSerialiser):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name',
-                  'last_name', 'is_subscribed')
+        fields = ('id', 'username', 'email',
+                  'first_name', 'last_name', 'is_subscribed')
 
     def get_is_subscribed(self, obj):
         """Метод наличия подписки на пользователя модели Subscription."""
