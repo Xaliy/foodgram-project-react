@@ -45,7 +45,8 @@ class RecipeIngredientSerializer(ModelSerializer):
     Во вьюхах опосредованно, черед другие сериализаторы.
     """
 
-    id = ReadOnlyField(source='ingredient.id')
+    # id = ReadOnlyField(source='ingredient.id')
+    id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
     name = ReadOnlyField(source='ingredient.name')
     unit_of_measurement = ReadOnlyField(
         source='ingredient.unit_of_measurement'

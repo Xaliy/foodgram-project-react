@@ -65,66 +65,66 @@ class RecipeViewSet(ModelViewSet):
         из базы данных и добавления в каждый объект дополнительных
         полей is_favorited и is_in_shopping_cart.
         """
-        # queryset = (
-        #     Recipe.objects
-        #     .select_related('author')
-        #     .prefetch_related('ingredients', 'tags')
-        # )
-        # user = self.request.user
-        # favorite_qs = Favorite.objects.filter(user=user,
-        #                                       recipe=OuterRef('id'))
-        # shopping_cart_qs = ShoppingCart.objects.filter(user=user,
-        #                                                recipe=OuterRef('id'))
-        # if user.is_authenticated:
-        #     queryset = queryset.annotate(
-        #         is_favorited=Exists(favorite_qs),
-        #         is_in_shopping_cart=Exists(shopping_cart_qs)
-        #     )
+        queryset = (
+            Recipe.objects
+            .select_related('author')
+            .prefetch_related('ingredients', 'tags')
+        )
+        user = self.request.user
+        favorite_qs = Favorite.objects.filter(user=user,
+                                              recipe=OuterRef('id'))
+        shopping_cart_qs = ShoppingCart.objects.filter(user=user,
+                                                       recipe=OuterRef('id'))
+        if user.is_authenticated:
+            queryset = queryset.annotate(
+                is_favorited=Exists(favorite_qs),
+                is_in_shopping_cart=Exists(shopping_cart_qs)
+            )
 
-        # return queryset
-        author_id = self.request.query_params.get('author')
-        if author_id:
-            author = get_object_or_404(User, pk=author_id)
-            return author.recipe.all()
+        return queryset
+        # author_id = self.request.query_params.get('author')
+        # if author_id:
+        #     author = get_object_or_404(User, pk=author_id)
+        #     return author.recipe.all()
 
-        tags_slug = self.request.query_params.get('tags')
-        if tags_slug:
-            tags = get_object_or_404(Tag, slug=tags_slug)
-            return tags.recipe.all()
+        # tags_slug = self.request.query_params.get('tags')
+        # if tags_slug:
+        #     tags = get_object_or_404(Tag, slug=tags_slug)
+        #     return tags.recipe.all()
 
-        is_favorited = self.request.query_params.get('is_favorited')
-        if is_favorited == '1':
-            return Recipe.objects.filter(favorite__user=self.request.user)
-        is_in_shopping_cart = self.request.query_params.get(
-            'is_in_shopping_cart')
-        if is_in_shopping_cart == '1':
-            return Recipe.objects.filter(
-                shopping_cart__user=self.request.user)
-        return Recipe.objects.all()
+        # is_favorited = self.request.query_params.get('is_favorited')
+        # if is_favorited == '1':
+        #     return Recipe.objects.filter(favorite__user=self.request.user)
+        # is_in_shopping_cart = self.request.query_params.get(
+        #     'is_in_shopping_cart')
+        # if is_in_shopping_cart == '1':
+        #     return Recipe.objects.filter(
+        #         shopping_cart__user=self.request.user)
+        # return Recipe.objects.all()
 
     def add_to_list(self, request, pk, serializer_class, model_class):
         """
         Метод добавляет объект в список.
         Используется в методах shopping_cart и favorite.
         """
-        # recipe = get_object_or_404(Recipe, id=pk)
-        # data = {'user': request.user.id,
-        #         'recipe': recipe.id}
-        # serializer = serializer_class(
-        #     data=data, context={'request': request}
-        # )
-
-        # serializer.is_valid(raise_exception=True)
-        # serializer.save()
-        user = self.request.user
-        recipe = get_object_or_404(Recipe, id=id)
+        recipe = get_object_or_404(Recipe, id=pk)
+        data = {'user': request.user.id,
+                'recipe': recipe.id}
         serializer = serializer_class(
-            recipe,
-            data=request.data,
-            context={'request': request}
+            data=data, context={'request': request}
         )
+
         serializer.is_valid(raise_exception=True)
-        model_class.objects.create(user=user, recipe=recipe)
+        serializer.save()
+        # user = self.request.user
+        # recipe = get_object_or_404(Recipe, id=id)
+        # serializer = serializer_class(
+        #     recipe,
+        #     data=request.data,
+        #     context={'request': request}
+        # )
+        # serializer.is_valid(raise_exception=True)
+        # model_class.objects.create(user=user, recipe=recipe)
 
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
