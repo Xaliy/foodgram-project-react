@@ -140,7 +140,7 @@ class RecipePostSerializer(ModelSerializer):
     Используется в представлении RecipeViewSet для POST звпросов.
     """
 
-    id = ReadOnlyField()  # nen
+    id = ReadOnlyField()  # добавила - может вторая ошибка отседа!!!
     author = UserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = IngredientInRecipeSerializer(many=True)
@@ -149,7 +149,8 @@ class RecipePostSerializer(ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'ingredients', 'tags', 'image', 'name', 'text', 'cooking_time',
+            'id', 'ingredients', 'tags', 'image',
+            'name', 'text', 'cooking_time',
         )
 
     # @transaction.atomic
@@ -165,17 +166,6 @@ class RecipePostSerializer(ModelSerializer):
     # #             )
     # #         )
     # #     RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
-
-    # def __update_tags_and_ingredients(self, tags, ingredients, instance):
-    #     for tag in tags:
-    #         RecipeTag.objects.create(recipe=instance, tag=tag)
-    #     for ingredient in ingredients:
-    #         obj = Ingredient.objects.get(pk=ingredient['id'])
-    #         RecipeIngredient.objects.create(
-    #             ingredient=obj,
-    #             recipe=instance,
-    #             amount=ingredient['amount']
-    #         )
     @staticmethod
     def add_ingredients(recipe, ingredients):
         ingredient_liist = []
@@ -198,13 +188,6 @@ class RecipePostSerializer(ModelSerializer):
     # recipe = Recipe.objects.create(author=request.user, **validated_data)
     # recipe.tags.set(tags)
     # self.add_ingredients(recipe, ingredients)
-    # # return recipe
-    # # ingredients = validated_data.pop('ingredients')
-    # # tags = validated_data.pop('tags')
-    # # author = self.context.get('request').user
-    # # recipe = Recipe.objects.create(author=author, **validated_data)
-    # # self.add_ingredients(tags, ingredients, recipe)
-    # # return recipe
     def create(self, validated_data):
         request = self.context.get('request', None)
         tags = validated_data.pop('tags')
