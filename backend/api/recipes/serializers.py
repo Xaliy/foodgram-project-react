@@ -140,7 +140,7 @@ class RecipePostSerializer(ModelSerializer):
     Используется в представлении RecipeViewSet для POST звпросов.
     """
 
-    id = ReadOnlyField()  # добавила - может вторая ошибка отседа!!!
+    # id = ReadOnlyField()  # добавила - может вторая ошибка отседа!!!
     author = UserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = IngredientInRecipeSerializer(many=True)
@@ -168,16 +168,23 @@ class RecipePostSerializer(ModelSerializer):
     # #     RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
     @staticmethod
     def add_ingredients(recipe, ingredients):
-        ingredient_liist = []
+        ingredient_list = []
         for ingredient_data in ingredients:
-            ingredient_liist.append(
+            ingredient_list.append(
                 RecipeIngredient(
                     ingredient=ingredient_data.pop('id'),
                     amount=ingredient_data.pop('amount'),
                     recipe=recipe,
                 )
             )
-        RecipeIngredient.objects.bulk_create(ingredient_liist)
+        RecipeIngredient.objects.bulk_create(ingredient_list)
+        # for ingredient in ingredients:
+        #     obj = Ingredient.objects.get(pk=ingredient['id'])
+        #     RecipeIngredient.objects.create(
+        #         ingredient=obj,
+        #         recipe=recipe,
+        #         amount=ingredient['amount']
+        #     )
 
     @transaction.atomic
     # def create(self, validated_data):
