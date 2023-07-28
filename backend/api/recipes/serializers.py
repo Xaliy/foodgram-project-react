@@ -139,7 +139,9 @@ class RecipePostSerializer(ModelSerializer):
     Созданиеи-редактирование рецепта и добавление ингридиентов в рецепт.
     Используется в представлении RecipeViewSet для POST звпросов.
     """
-
+    
+    id = ReadOnlyField()  # nen
+    author = UserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = IngredientInRecipeSerializer(many=True)
     image = Base64ImageField()
@@ -150,45 +152,87 @@ class RecipePostSerializer(ModelSerializer):
             'ingredients', 'tags', 'image', 'name', 'text', 'cooking_time',
         )
 
-    @transaction.atomic
-    def add_ingredients(self, recipe, ingredients):
-        """Атомарный метод добавления ингридиентов в рецепт."""
-        ingredient_list_in_recipe = []
+    # @transaction.atomic
+    # # def add_ingredients(self, recipe, ingredients):
+    # #     """Атомарный метод добавления ингридиентов в рецепт."""
+    # #     ingredient_list_in_recipe = []
+    # #     for ingredient_data in ingredients:
+    # #         ingredient_list_in_recipe.append(
+    # #             RecipeIngredient(
+    # #                 ingredient=ingredient_data['id'],
+    # #                 amount=ingredient_data['amount'],
+    # #                 recipe=recipe,
+    # #             )
+    # #         )
+    # #     RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
+
+    # def __update_tags_and_ingredients(self, tags, ingredients, instance):
+    #     for tag in tags:
+    #         RecipeTag.objects.create(recipe=instance, tag=tag)
+    #     for ingredient in ingredients:
+    #         obj = Ingredient.objects.get(pk=ingredient['id'])
+    #         RecipeIngredient.objects.create(
+    #             ingredient=obj,
+    #             recipe=instance,
+    #             amount=ingredient['amount']
+    #         )
+    @staticmethod
+    def add_ingredients(recipe, ingredients):
+        ingredient_liist = []
         for ingredient_data in ingredients:
-            ingredient_list_in_recipe.append(
+            ingredient_liist.append(
                 RecipeIngredient(
-                    ingredient=ingredient_data['id'],
-                    amount=ingredient_data['amount'],
+                    ingredient=ingredient_data.pop('id'),
+                    amount=ingredient_data.pop('amount'),
                     recipe=recipe,
                 )
             )
-        RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
+        RecipeIngredient.objects.bulk_create(ingredient_liist)
 
     @transaction.atomic
+    # def create(self, validated_data):
+    # """Атомарный метод создания рецепта с ингридиентами."""
+    # request = self.context.get('request', None)
+    # tags = validated_data['tags']
+    # ingredients = validated_data['ingredients']
+    # recipe = Recipe.objects.create(author=request.user, **validated_data)
+    # recipe.tags.set(tags)
+    # self.add_ingredients(recipe, ingredients)
+    # # return recipe
+    # # ingredients = validated_data.pop('ingredients')
+    # # tags = validated_data.pop('tags')
+    # # author = self.context.get('request').user
+    # # recipe = Recipe.objects.create(author=author, **validated_data)
+    # # self.add_ingredients(tags, ingredients, recipe)
+    # # return recipe
     def create(self, validated_data):
-        """Атомарный метод создания рецепта с ингридиентами."""
         request = self.context.get('request', None)
-        tags = validated_data['tags']
-        ingredients = validated_data['ingredients']
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(author=request.user, **validated_data)
         recipe.tags.set(tags)
         self.add_ingredients(recipe, ingredients)
-
         return recipe
 
-    @transaction.atomic
+    # @transaction.atomic
     def update(self, instance, validated_data):
         """Атомарный метод редактирования рецепта."""
-        if not instance.is_active:
-            raise NotFound(detail='Рецепт не найден')
-        tags = validated_data.get('tags', instance.tags)
-        instance.tags.set(tags)
-        ingredients = validated_data['ingredients']
-        instance.image = validated_data.get('image', instance.image)
-        if ingredients is not None:
-            instance.ingredients.clear()
-            self.add_ingredients(ingredients, instance)
+        # if not instance.is_active:
+        #     raise NotFound(detail='Рецепт не найден')
+        # tags = validated_data.get('tags', instance.tags)
+        # instance.tags.set(tags)
+        # ingredients = validated_data['ingredients']
+        # instance.image = validated_data.get('image', instance.image)
+        # if ingredients is not None:
+        #     instance.ingredients.clear()
+        #     self.add_ingredients(instance, ingredients)
 
+        # return super().update(instance, validated_data)
+        instance.tags.clear()
+        RecipeIngredient.objects.filter(recipe=instance).delete()
+        instance.tags.set(validated_data.pop('tags'))
+        ingredients = validated_data.pop('ingredients')
+        self.create_ingredients(instance, ingredients)
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):
