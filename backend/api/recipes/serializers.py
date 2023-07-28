@@ -53,7 +53,7 @@ class RecipeIngredientSerializer(ModelSerializer):
 
     class Meta:
         model = RecipeIngredient
-        fields = ('amount', 'id',
+        fields = ('id', 'amount',
                   'name', 'unit_of_measurement',)
 
 
@@ -66,17 +66,16 @@ class IngredientInRecipeSerializer(ModelSerializer):
     В представлениях используется опосредованно через другие сериализаторы.
     """
 
-    # id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
-    id = ReadOnlyField(source='ingredient.id')
-    name = ReadOnlyField(source='ingredient.name')
-    unit_of_measurement = ReadOnlyField(
-        source='ingredient.unit_of_measurement'
-    )
+    id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    # id = ReadOnlyField(source='ingredient.id')
+    # name = ReadOnlyField(source='ingredient.name')
+    # unit_of_measurement = ReadOnlyField(
+    #     source='ingredient.unit_of_measurement'
+    # )
 
     class Meta:
         model = RecipeIngredient
-        fields = ('amount', 'id',
-                  'name', 'unit_of_measurement',)
+        fields = ('amount', 'id')
 
 
 class RecipeSerializer(ModelSerializer):
@@ -89,27 +88,31 @@ class RecipeSerializer(ModelSerializer):
 
     tags = TagSerializer(read_only=True, many=True)
     author = UserSerializer(read_only=True)
-    ingredients = RecipeIngredientSerializer(
-        read_only=True,
-        many=True,
-        source='ingredients'
-    )
+    # ingredients = RecipeIngredientSerializer(
+    #     read_only=True,
+    #     many=True,
+    #     source='ingredients'
+    # )
     ingredients = SerializerMethodField()
     is_favorited = BooleanField(read_only=True, default=False)
     is_in_shopping_cart = BooleanField(read_only=True, default=False)
 
     class Meta:
+        model = Recipe
         fields = (
             'id', 'tags', 'author', 'is_favorited',
             'is_in_shopping_cart', 'name', 'image',
             'text', 'cooking_time', 'ingredients'
         )
-        model = Recipe
 
     def get_ingredients(self, obj):
+        # ingredients = (
+        #     RecipeIngredient.objects
+        #     .select_related('recipe', 'ingredient')
+        #     .filter(recipe=obj)
+        # )
         ingredients = (
             RecipeIngredient.objects
-            .select_related('recipe', 'ingredient')
             .filter(recipe=obj)
         )
         return RecipeIngredientSerializer(ingredients, many=True).data
@@ -143,7 +146,7 @@ class RecipePostSerializer(ModelSerializer):
     """
 
     # id = ReadOnlyField()  # добавила - может вторая ошибка отседа!!!
-    author = UserSerializer(read_only=True)
+    # author = UserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = IngredientInRecipeSerializer(many=True)
     image = Base64ImageField()
@@ -157,22 +160,29 @@ class RecipePostSerializer(ModelSerializer):
 
     def add_ingredients(self, recipe, ingredients):
         """Метод добавления ингридиентов в рецепт."""
-        relations = []
-        for ingredient_data in ingredients:
-            relations.append(RecipeIngredient(
+        # relations = []
+        # for ingredient_data in ingredients:
+        #     relations.append(RecipeIngredient(
+        #         recipe=recipe,
+        #         ingredient_id=ingredient_data['ingredient_id'],
+        #         amount=ingredient_data['amount']
+        #     ))
+        recipe_ingredients = [
+            RecipeIngredient(
                 recipe=recipe,
-                ingredient_id=ingredient_data['ingredient_id'],
-                amount=ingredient_data['amount']
-            ))
-        RecipeIngredient.objects.bulk_create(relations)
+                ingredient=ingr.get('id'),
+                amount=ingr.get('amount'),
+            ) for ingr in ingredients
+        ]
+        RecipeIngredient.objects.bulk_create(recipe_ingredients)
 
     @transaction.atomic
     def create(self, validated_data):
         """Атомарный метод создания рецепта с ингридиентами."""
-        request = self.context.get('request', None)
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
-        recipe = Recipe.objects.create(author=request.user, **validated_data)
+        author = self.context.get('request', None)
+        recipe = Recipe.objects.create(author=author.user, **validated_data)
         recipe.tags.set(tags)
         self.add_ingredients(recipe, ingredients)
         return recipe

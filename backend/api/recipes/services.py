@@ -34,9 +34,9 @@ def get_shopping_list(user):
         .annotate(amount=Sum('amount'))
     )
 
-    shop_list = '\n'.join([
+    shopping_list = '\n'.join([
         f"{ingredient['ingredient__name']} - {ingredient['amount']} "
         f"({ingredient['ingredient__unit_of_measurement']})"
         for ingredient in ingredients
     ])
-    return f"Cписок покупок:\n{shop_list}"
+    return f"Cписок покупок:\n{shopping_list}"
