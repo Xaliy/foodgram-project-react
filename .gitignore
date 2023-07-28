@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 validators2.py
+services_copy2.py
 serializers cop4.py
 serializers_copy2.py
 serializers _opy3.py

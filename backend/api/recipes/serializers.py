@@ -88,11 +88,6 @@ class RecipeSerializer(ModelSerializer):
 
     tags = TagSerializer(read_only=True, many=True)
     author = UserSerializer(read_only=True)
-    # ingredients = RecipeIngredientSerializer(
-    #     read_only=True,
-    #     many=True,
-    #     source='ingredients'
-    # )
     ingredients = SerializerMethodField()
     is_favorited = BooleanField(read_only=True, default=False)
     is_in_shopping_cart = BooleanField(read_only=True, default=False)
@@ -145,8 +140,6 @@ class RecipePostSerializer(ModelSerializer):
     Используется в представлении RecipeViewSet для POST звпросов.
     """
 
-    # id = ReadOnlyField()  # добавила - может вторая ошибка отседа!!!
-    # author = UserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = IngredientInRecipeSerializer(many=True)
     image = Base64ImageField()
@@ -160,13 +153,6 @@ class RecipePostSerializer(ModelSerializer):
 
     def add_ingredients(self, recipe, ingredients):
         """Метод добавления ингридиентов в рецепт."""
-        # relations = []
-        # for ingredient_data in ingredients:
-        #     relations.append(RecipeIngredient(
-        #         recipe=recipe,
-        #         ingredient_id=ingredient_data['ingredient_id'],
-        #         amount=ingredient_data['amount']
-        #     ))
         recipe_ingredients = [
             RecipeIngredient(
                 recipe=recipe,
