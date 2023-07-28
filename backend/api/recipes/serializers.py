@@ -154,37 +154,37 @@ class RecipePostSerializer(ModelSerializer):
         )
 
     # @transaction.atomic
-    # # def add_ingredients(self, recipe, ingredients):
-    # #     """Атомарный метод добавления ингридиентов в рецепт."""
-    # #     ingredient_list_in_recipe = []
-    # #     for ingredient_data in ingredients:
-    # #         ingredient_list_in_recipe.append(
-    # #             RecipeIngredient(
-    # #                 ingredient=ingredient_data['id'],
-    # #                 amount=ingredient_data['amount'],
-    # #                 recipe=recipe,
-    # #             )
-    # #         )
-    # #     RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
-    @staticmethod
-    def add_ingredients(recipe, ingredients):
-        ingredient_list = []
-        for ingredient_data in ingredients:
-            ingredient_list.append(
-                RecipeIngredient(
-                    ingredient=ingredient_data.pop('id'),
-                    amount=ingredient_data.pop('amount'),
-                    recipe=recipe,
-                )
+    def add_ingredients(self, recipe, ingredients):
+        # #     """Атомарный метод добавления ингридиентов в рецепт."""
+        # #     ingredient_list_in_recipe = []
+        # #     for ingredient_data in ingredients:
+        # #         ingredient_list_in_recipe.append(
+        # #             RecipeIngredient(
+        # #                 ingredient=ingredient_data['id'],
+        # #                 amount=ingredient_data['amount'],
+        # #                 recipe=recipe,
+        # #             )
+        # #         )
+        # #     RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
+        # # # @staticmethod
+        # # # def add_ingredients(recipe, ingredients):
+        # # #     ingredient_list = []
+        # # #     for ingredient_data in ingredients:
+        # # #         ingredient_list.append(
+        # # #             RecipeIngredient(
+        # # #                 ingredient=ingredient_data.pop('id'),
+        # # #                 amount=ingredient_data.pop('amount'),
+        # # #                 recipe=recipe,
+        # # #             )
+        # # #         )
+        # # #     RecipeIngredient.objects.bulk_create(ingredient_list)
+        for ingredient in ingredients:
+            obj = Ingredient.objects.get(pk=ingredient['id'])
+            RecipeIngredient.objects.create(
+                ingredient=obj,
+                recipe=recipe,
+                amount=ingredient['amount']
             )
-        RecipeIngredient.objects.bulk_create(ingredient_list)
-        # for ingredient in ingredients:
-        #     obj = Ingredient.objects.get(pk=ingredient['id'])
-        #     RecipeIngredient.objects.create(
-        #         ingredient=obj,
-        #         recipe=recipe,
-        #         amount=ingredient['amount']
-        #     )
 
     @transaction.atomic
     # def create(self, validated_data):
