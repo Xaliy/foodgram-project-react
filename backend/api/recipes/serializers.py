@@ -149,8 +149,8 @@ class RecipePostSerializer(ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'id', 'ingredients', 'tags', 'image',
-            'name', 'text', 'cooking_time',
+            'id', 'ingredients', 'tags', 'author',
+            'image', 'name', 'text', 'cooking_time',
         )
 
     # @transaction.atomic
