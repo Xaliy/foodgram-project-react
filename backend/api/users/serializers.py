@@ -46,11 +46,6 @@ class UserCreateSerializer(DjoserUserCreateSerializer):
             raise serializers.ValidationError('Email уже зарегистрирован')
         return norm_email
 
-    # def validate_username(self, value):
-    #     if value == 'me':
-    #         raise serializers.ValidationError('me зарегистрировано системой')
-    #     return value
-
 
 class ReadSubscriptionsSerializer(serializers.ModelSerializer):
     """Сериализатор для отображения подписок пользователя Subscription."""
@@ -61,7 +56,7 @@ class ReadSubscriptionsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'first_name', 'last_name',
+        fields = ('id', 'username', 'first_name', 'last_name',
                   'is_subscribed', 'recipes', 'recipes_count')
 
     def get_is_subscribed(self, obj):

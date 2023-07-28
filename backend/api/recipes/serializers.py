@@ -45,7 +45,7 @@ class RecipeIngredientSerializer(ModelSerializer):
     Во вьюхах опосредованно, черед другие сериализаторы.
     """
 
-    id = IntegerField(source='ingredient.id')
+    id = ReadOnlyField(source='ingredient.id')
     name = ReadOnlyField(source='ingredient.name')
     unit_of_measurement = ReadOnlyField(
         source='ingredient.unit_of_measurement'
@@ -89,11 +89,11 @@ class RecipeSerializer(ModelSerializer):
 
     tags = TagSerializer(read_only=True, many=True)
     author = UserSerializer(read_only=True)
-    # ingredients = RecipeIngredientSerializer(
-    #     read_only=True,
-    #     many=True,
-    #     source='ingredients'
-    # )
+    ingredients = RecipeIngredientSerializer(
+        read_only=True,
+        many=True,
+        source='ingredients'
+    )
     ingredients = SerializerMethodField()
     is_favorited = BooleanField(read_only=True, default=False)
     is_in_shopping_cart = BooleanField(read_only=True, default=False)
@@ -107,9 +107,11 @@ class RecipeSerializer(ModelSerializer):
         model = Recipe
 
     def get_ingredients(self, obj):
-        ingredients = RecipeIngredient.objects.select_related(
-            'recipe', 'ingredient'
-        ).filter(recipe=obj)
+        ingredients = (
+            RecipeIngredient.objects
+            .select_related('recipe', 'ingredient')
+            .filter(recipe=obj)
+        )
         return RecipeIngredientSerializer(ingredients, many=True).data
 
     def get_is_favorited(self, obj):
@@ -153,49 +155,20 @@ class RecipePostSerializer(ModelSerializer):
             'image', 'name', 'text', 'cooking_time',
         )
 
-    # @transaction.atomic
     def add_ingredients(self, recipe, ingredients):
-        # #     """Атомарный метод добавления ингридиентов в рецепт."""
-        # #     ingredient_list_in_recipe = []
-        # #     for ingredient_data in ingredients:
-        # #         ingredient_list_in_recipe.append(
-        # #             RecipeIngredient(
-        # #                 ingredient=ingredient_data['id'],
-        # #                 amount=ingredient_data['amount'],
-        # #                 recipe=recipe,
-        # #             )
-        # #         )
-        # #     RecipeIngredient.objects.bulk_create(ingredient_list_in_recipe)
-        # # # @staticmethod
-        # # # def add_ingredients(recipe, ingredients):
-        # # #     ingredient_list = []
-        # # #     for ingredient_data in ingredients:
-        # # #         ingredient_list.append(
-        # # #             RecipeIngredient(
-        # # #                 ingredient=ingredient_data.pop('id'),
-        # # #                 amount=ingredient_data.pop('amount'),
-        # # #                 recipe=recipe,
-        # # #             )
-        # # #         )
-        # # #     RecipeIngredient.objects.bulk_create(ingredient_list)
-        for ingredient in ingredients:
-            obj = Ingredient.objects.get(pk=ingredient['id'])
-            RecipeIngredient.objects.create(
-                ingredient=obj,
+        """Метод добавления ингридиентов в рецепт."""
+        relations = []
+        for ingredient_data in ingredients:
+            relations.append(RecipeIngredient(
                 recipe=recipe,
-                amount=ingredient['amount']
-            )
+                ingredient_id=ingredient_data['ingredient_id'],
+                amount=ingredient_data['amount']
+            ))
+        RecipeIngredient.objects.bulk_create(relations)
 
     @transaction.atomic
-    # def create(self, validated_data):
-    # """Атомарный метод создания рецепта с ингридиентами."""
-    # request = self.context.get('request', None)
-    # tags = validated_data['tags']
-    # ingredients = validated_data['ingredients']
-    # recipe = Recipe.objects.create(author=request.user, **validated_data)
-    # recipe.tags.set(tags)
-    # self.add_ingredients(recipe, ingredients)
     def create(self, validated_data):
+        """Атомарный метод создания рецепта с ингридиентами."""
         request = self.context.get('request', None)
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
@@ -204,20 +177,9 @@ class RecipePostSerializer(ModelSerializer):
         self.add_ingredients(recipe, ingredients)
         return recipe
 
-    # @transaction.atomic
+    @transaction.atomic
     def update(self, instance, validated_data):
         """Атомарный метод редактирования рецепта."""
-        # if not instance.is_active:
-        #     raise NotFound(detail='Рецепт не найден')
-        # tags = validated_data.get('tags', instance.tags)
-        # instance.tags.set(tags)
-        # ingredients = validated_data['ingredients']
-        # instance.image = validated_data.get('image', instance.image)
-        # if ingredients is not None:
-        #     instance.ingredients.clear()
-        #     self.add_ingredients(instance, ingredients)
-
-        # return super().update(instance, validated_data)
         instance.tags.clear()
         RecipeIngredient.objects.filter(recipe=instance).delete()
         instance.tags.set(validated_data.pop('tags'))
