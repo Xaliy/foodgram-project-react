@@ -205,6 +205,8 @@ class RecipePostSerializer(ModelSerializer):
         return RecipeSerializer(instance, context={'request': request}).data
 
 
+# изменения - убрала валидатор добавила еще один класс  ReadFavoriteSerializer
+# и через него метод to_representation
 class FavoriteRecipeSerializer(ModelSerializer):
     """
     Сериализатор модели Favorite.
@@ -217,12 +219,31 @@ class FavoriteRecipeSerializer(ModelSerializer):
     class Meta:
         model = Favorite
         fields = ('user', 'recipe',)
-        validators = [
-            validators.UniqueTogetherValidator(
-                queryset=Favorite.objects.all(),
-                fields=['user', 'recipe'],
-            )
-        ]
+        # убрала
+        # validators = [
+        #     validators.UniqueTogetherValidator(
+        #         queryset=Favorite.objects.all(),
+        #         fields=['user', 'recipe'],
+        #     )
+        # ]
+
+# добавила
+    def to_representation(self, instance):
+        return ReadFavoriteSerializer(instance.recipe, context={
+            'request': self.context.get('request')
+        }).data
+
+
+# добавила
+class ReadFavoriteSerializer(ModelSerializer):
+    """
+    Сериализатор для чтения избранных рецептов.
+    Используется в FavoriteRecipeSerializer.
+    """
+
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
 
 
 class UserSubscribeSerializer(ModelSerializer):
