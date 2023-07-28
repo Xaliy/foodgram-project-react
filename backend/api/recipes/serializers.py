@@ -151,7 +151,7 @@ class RecipePostSerializer(ModelSerializer):
         )
 
     @transaction.atomic
-    def add_ingredients(recipe, ingredients):
+    def add_ingredients(self, recipe, ingredients):
         """Атомарный метод добавления ингридиентов в рецепт."""
         ingredient_list_in_recipe = []
         for ingredient_data in ingredients:
@@ -172,7 +172,7 @@ class RecipePostSerializer(ModelSerializer):
         ingredients = validated_data['ingredients']
         recipe = Recipe.objects.create(author=request.user, **validated_data)
         recipe.tags.set(tags)
-        self.add_ingredients(ingredients, recipe)
+        self.add_ingredients(recipe, ingredients)
 
         return recipe
 

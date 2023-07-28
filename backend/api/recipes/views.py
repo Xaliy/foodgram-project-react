@@ -3,7 +3,8 @@ from tempfile import TemporaryFile
 
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
-from django.http import FileResponse
+# from django.http import FileResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
@@ -162,17 +163,22 @@ class RecipeViewSet(ModelViewSet):
         Метод скачивания списка покупок для всех рецептов,
         которые добавлены в список покупок пользователя.
         """
-        user = request.user
-        shopping_list = get_shopping_list(user)
+        # user = request.user
+        # shopping_list = get_shopping_list(user)
 
-        # создаем временный файл для загрузки
-        with TemporaryFile() as file:
-            file.write(shopping_list.encode())
-            file.seek(0)
+        # # создаем временный файл для загрузки
+        # with TemporaryFile() as file:
+        #     file.write(shopping_list.encode())
+        #     file.seek(0)
 
-            response = FileResponse(file, filename='shopping_list.txt')
-            response['Content-Disposition'] = '''attachment;
-                                                filename="shopping_list.txt"'''
-            response['Content-Length'] = file.tell()
+        #     response = FileResponse(file, filename='shopping_list.txt')
+        #     response['Content-Disposition'] = '''attachment;
+        #                                         filename="shopping_list.txt"'''
+        #     response['Content-Length'] = file.tell()
 
-            return response
+        #     return response
+        shopping_list = get_shopping_list(request.user)
+        filename = 'shop_list.txt'
+        response = HttpResponse(shopping_list, content_type='text/plain')
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+        return response
