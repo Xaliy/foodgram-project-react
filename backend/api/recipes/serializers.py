@@ -2,16 +2,17 @@ from drf_extra_fields.fields import Base64ImageField
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from djoser.serializers import UserSerializer as DjoserUserSerialiser
+
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Subscription, Tag)
 from rest_framework import validators
-from rest_framework.exceptions import NotFound
-from rest_framework.serializers import (BooleanField, IntegerField,
+# from rest_framework.exceptions import NotFound
+from rest_framework.serializers import (BooleanField,
                                         ModelSerializer,
                                         PrimaryKeyRelatedField, ReadOnlyField,
                                         SerializerMethodField, ValidationError)
 
-from api.users.serializers import UserSerializer
+from api.users.serializers import UserSerializer as ApiUserSerializer
 
 
 class TagSerializer(ModelSerializer):
@@ -88,7 +89,7 @@ class RecipeSerializer(ModelSerializer):
     """
 
     tags = TagSerializer(read_only=True, many=True)
-    author = UserSerializer(read_only=True)
+    author = ApiUserSerializer(read_only=True)
     # ingredients = RecipeIngredientSerializer(
     #     read_only=True,
     #     many=True,
@@ -147,7 +148,7 @@ class RecipePostSerializer(ModelSerializer):
     """
 
     # id = ReadOnlyField()  # добавила - может вторая ошибка отседа!!!
-    # author = UserSerializer(read_only=True)
+    # author = ApiUserSerializer(read_only=True)
     tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
     ingredients = IngredientInRecipeSerializer(many=True)
     image = Base64ImageField()
