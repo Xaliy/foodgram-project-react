@@ -7,7 +7,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.models import Recipe, Subscription
-from .serializers import ReadFavoriteSerializer
+from api.recipes.serializers import ReadFavoriteSerializer
 
 User = get_user_model()
 
