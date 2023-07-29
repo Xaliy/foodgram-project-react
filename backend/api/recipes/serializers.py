@@ -214,18 +214,19 @@ class FavoriteRecipeSerializer(ModelSerializer):
     Используется в представлении RecipeViewSet для метода favorite.
     """
 
-    recipe = RecipeSerializer()
+    # recipe = RecipeSerializer()
 
     class Meta:
         model = Favorite
-        fields = ('user', 'recipe',)
+        fields = ('id', 'user', 'recipe',)
         # убрала
-        # validators = [
-        #     validators.UniqueTogetherValidator(
-        #         queryset=Favorite.objects.all(),
-        #         fields=['user', 'recipe'],
-        #     )
-        # ]
+        validators = [
+            validators.UniqueTogetherValidator(
+                queryset=Favorite.objects.all(),
+                fields=['user', 'recipe'],
+                message='Рецепт уже находится в избранном.'
+            )
+        ]
 
 # добавила
     def to_representation(self, instance):
