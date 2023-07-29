@@ -55,7 +55,8 @@ pip install -r requirements.txt
 ``` 
 4. Выполнить миграции:
 ```
-python3 manage.py migrate
+python3 manage.py load_tags
+backend python manage.py load_ingredients
 ``` 
 5. Запустить проект:
 ```
@@ -76,15 +77,17 @@ sudo docker-compose up -d --build
 ```
 3. Выполнить миграции
 ```
-docker-compose exec web python manage.py migrate
+docker-compose exec backend python manage.py migrate
+docker-compose exec backend python manage.py load_tags
+docker-compose exec backend python manage.py load_ingredients
 ```
 4. Создать суперпользователя
 ```
-docker-compose exec web python manage.py createsuperuser
+docker-compose exec backend python manage.py createsuperuser
 ```
 5. Загрузить статику
 ```
-docker-compose exec web python manage.py collectstatic --no-input
+docker-compose exec backend python manage.py collectstatic --no-input
 ```
 
 ## Как запустить проект на ВМ:
@@ -95,7 +98,17 @@ git clone git@github.com:Xaliy/foodgram-project-react.git
 2. Подключиться к серверу. Установить на сервере docker и docker-compose.
 3. Скопировать на сервер файлы docker-compose.yml и nginx.conf
 4. Создать .env файл на сервере и добавить в него настройки .env
-
+5. НА локальном сервере собрать образы
+6. Запушить с локального сервера на GitHub сборку
+7. После автоматического деплоя на ВМ выполнить миграции, заливки и создать суперпользователя.
+```
+sudo docker-compose exec -T backend python manage.py makemigrations
+sudo docker-compose exec -T backend python manage.py migrate
+sudo docker-compose exec -T backend python manage.py collectstatic --no-input
+sudo docker-compose exec -T backend python manage.py load_tags
+sudo docker-compose exec -T backend python manage.py load_ingredients
+sudo docker-compose exec backend python manage.py createsuperuser
+```
 ## Шаблон наполнения .env
 - DB_ENGINE # указываем, что работаем с postgresql
 - DB_NAME # имя базы данных

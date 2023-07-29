@@ -109,7 +109,7 @@ class RecipeViewSet(ModelViewSet):
         """
         recipe = get_object_or_404(Recipe, id=pk)
         data = {'user': request.user.id,
-                'recipe': recipe.id}
+                'recipe': recipe.id, }
         serializer = serializer_class(
             data=data, context={'request': request}
         )
@@ -117,7 +117,7 @@ class RecipeViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         # user = self.request.user
-        # recipe = get_object_or_404(Recipe, id=id)
+        # recipe = get_object_or_404(Recipe, id=pk)
         # serializer = serializer_class(
         #     recipe,
         #     data=request.data,

@@ -7,7 +7,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import ReadSubscriptionsSerializer, UserSerializer
+# from .serializers import ( # ReadSubscriptionsSerializer,
+#                           WriteSubscriptionSerializer,
+#                           UserSerializer
+# )
+from .serializers import (WriteSubscriptionSerializer,
+                          UserSerializer)
 
 User = get_user_model()
 
@@ -62,7 +67,7 @@ class SubscriptionsView(ListAPIView):
     """Список подписок пользователя. Subscriptions."""
 
     permission_classes = [IsAuthenticated]
-    serializer_class = ReadSubscriptionsSerializer
+    serializer_class = WriteSubscriptionSerializer
 
     def get_queryset(self):
         """Метод список подписок пользоваетеля. Subscriptions."""
