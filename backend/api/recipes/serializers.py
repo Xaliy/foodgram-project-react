@@ -11,8 +11,7 @@ from rest_framework.serializers import (BooleanField,
                                         ModelSerializer,
                                         PrimaryKeyRelatedField, ReadOnlyField,
                                         SerializerMethodField, ValidationError)
-
-from api.users.serializers import UserSerializer as ApiUserSerializer
+from api.users.serializers import DUserSerializer as ApiUserSerializer
 
 
 class TagSerializer(ModelSerializer):
