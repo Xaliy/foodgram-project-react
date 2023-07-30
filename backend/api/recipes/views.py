@@ -3,7 +3,7 @@ from tempfile import TemporaryFile
 
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
-from django.http import FileResponse
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
@@ -37,7 +37,7 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     filter_backends = [SearchFilter]
-    search_fields = ('^name',)
+    search_fields = ('^name', 'name')
 
 
 class RecipeViewSet(ModelViewSet):
@@ -45,9 +45,8 @@ class RecipeViewSet(ModelViewSet):
     Представление класса Recipe.
     Методы: выбор класса сериализатора,
     """
-
-    serializer_class = RecipeSerializer
     permission_classes = (IsAuthor, )
+    http_method_names = ['get', 'post', 'patch', 'delete']
     filter_backends = (DjangoFilterBackend, )
     filterset_class = RecipeFilter
     pagination_class = CustomPaginator
@@ -157,16 +156,6 @@ class RecipeViewSet(ModelViewSet):
         detail=False,
         permission_classes=[IsAuthenticated],
     )
-    # def download_shopping_cart(self, request):
-    #     """
-    #     Метод скачивания списка покупок для всех рецептов,
-    #     которые добавлены в список покупок пользователя.
-    #     """
-    #     shopping_list = get_shopping_list(request.user)
-    #     filename = 'shop_list.txt'
-    #     response = HttpResponse(shopping_list, content_type='text/plain')
-    #     response['Content-Disposition'] = f'attachment; filename={filename}'
-    #     return response
     def download_shopping_cart(self, request):
         """
         Метод скачивания списка покупок для всех рецептов,
@@ -175,14 +164,10 @@ class RecipeViewSet(ModelViewSet):
         user = request.user
         shopping_list = get_shopping_list(user)
 
-        # создаем временный файл для загрузки
-        with TemporaryFile() as file:
-            file.write(shopping_list.encode())
-            file.seek(0)
-
-            response = FileResponse(file, filename='shopping_list.txt')
-            response['Content-Disposition'] = '''attachment;
-                                                filename="shopping_list.txt"'''
-            response['Content-Length'] = file.tell()
-
-            return response
+        return HttpResponse(
+            shopping_list,
+            {
+                "Content-Type": "text/plain",
+                "Content-Disposition": "attachment; filename='shop_list.txt'",
+            },
+        )

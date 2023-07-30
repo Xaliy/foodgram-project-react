@@ -1,19 +1,21 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Exists, OuterRef
+# from django.db.models import Exists, OuterRef
+from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import validators
-from rest_framework.exceptions import NotFound, PermissionDenied
-from rest_framework.serializers import (BooleanField, IntegerField,
-                                        ModelSerializer,
-                                        PrimaryKeyRelatedField,
-                                        SerializerMethodField, ReadOnlyField,
-                                        ValidationError)
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.serializers import (
+    BooleanField, IntegerField, ModelSerializer,
+    PrimaryKeyRelatedField, SerializerMethodField, ReadOnlyField,
+    ValidationError
+)
 
 from api.users.serializers import UserSerializer
 from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from users.models import Subscription
+
 
 User = get_user_model()
 
@@ -49,10 +51,10 @@ class RecipeIngredientSerializer(ModelSerializer):
     Во вьюхах опосредованно, черед другие сериализаторы.
     """
 
-    id = IntegerField(source='ingredient.id')
+    id = ReadOnlyField(source='ingredient.id')
     name = ReadOnlyField(source='ingredient.name')
     unit_of_measurement = ReadOnlyField(
-        source='ingredient.unit_of_measurement'
+        source='ingredient.measurement_unit'
     )
 
     class Meta:
@@ -61,19 +63,13 @@ class RecipeIngredientSerializer(ModelSerializer):
 
 
 class RecipeIngredientCreateSerializer(ModelSerializer):
-    """
-    Сериализатор модели RecipeIngredient.
-    Набор полей для сохранения и/или редактирования
-    данных об ингредиентах в рецепте.
-    Используется в сериализаторе RecipeSerializer и RecipePostSerializer
-    В представлениях используется опосредованно через другие сериализаторы.
-    """
+    """Сериалайзер для добавления ингредиента в рецепт"""
 
     id = IntegerField()
 
     class Meta:
         model = RecipeIngredient
-        fields = ('amount', 'id')
+        fields = ('id', 'amount', )
 
 
 class RecipeSerializer(ModelSerializer):
@@ -87,21 +83,18 @@ class RecipeSerializer(ModelSerializer):
     tags = TagSerializer(read_only=True, many=True)
     author = UserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
-        read_only=True,
-        many=True,
-        source='ingredients'
+        many=True, read_only=True, source='recipe_ingredients'
     )
     image = Base64ImageField()
     is_favorited = BooleanField(read_only=True, default=False)
     is_in_shopping_cart = BooleanField(read_only=True, default=False)
 
     class Meta:
-        model = Recipe
         fields = (
-            'id', 'tags', 'author', 'is_favorited',
-            'is_in_shopping_cart', 'name', 'image',
-            'text', 'cooking_time', 'ingredients'
+            'id', 'tags', 'author', 'ingredients', 'is_favorited',
+            'is_in_shopping_cart', 'name', 'image', 'text', 'cooking_time',
         )
+        model = Recipe
 
 
 class RecipePostSerializer(ModelSerializer):
@@ -111,16 +104,49 @@ class RecipePostSerializer(ModelSerializer):
     Используется в представлении RecipeViewSet для POST звпросов.
     """
 
-    tags = PrimaryKeyRelatedField(queryset=Tag.objects.all(), many=True)
+    tags = PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True,
+    )
+    ingredients = RecipeIngredientCreateSerializer(many=True)
+    author = UserSerializer(read_only=True)
     ingredients = RecipeIngredientCreateSerializer(many=True)
     image = Base64ImageField()
 
     class Meta:
         model = Recipe
         fields = (
-            'id', 'ingredients', 'tags', 'author',
+            'author', 'ingredients', 'tags',
             'image', 'name', 'text', 'cooking_time',
         )
+
+    def validate_ingredients(self, ingredients):
+        if not ingredients:
+            raise ValidationError(
+                'Необходимо добавить хотя бы один ингредиент'
+            )
+        ingredients_list = [ingredient['id'] for ingredient in ingredients]
+        if len(ingredients_list) != len(set(ingredients_list)):
+            raise ValidationError(
+                'Ингредиенты не должны повторяться'
+            )
+        for ingredient in ingredients:
+            if int(ingredient['amount']) <= 0:
+                raise ValidationError({
+                    'Количество ингредиента не может быть равно нулю'
+                })
+        return ingredients
+
+    def validate_tags(self, tags):
+        if not tags:
+            raise ValidationError(
+                'Необходимо добавить хотя бы один тэг'
+            )
+        if len(tags) != len(set(tags)):
+            raise ValidationError(
+                'Тэги не должны повторяться'
+            )
+        return tags
 
     @transaction.atomic
     def add_ingredients(self, recipe, ingredients):
@@ -129,7 +155,8 @@ class RecipePostSerializer(ModelSerializer):
         for ingredient_data in ingredients:
             ingredient_list_in_recipe.append(
                 RecipeIngredient(
-                    ingredient=ingredient_data['id'],
+                    ingredient=get_object_or_404(Ingredient,
+                                                 id=ingredient_data['id']),
                     amount=ingredient_data['amount'],
                     recipe=recipe,
                 )
@@ -139,45 +166,39 @@ class RecipePostSerializer(ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         """Атомарный метод создания рецепта с ингридиентами."""
-        request = self.context.get('request', None)
+        request = self.context.get('request')
+        author = request.user
         if not request.user.is_authenticated:
             raise PermissionDenied(
                 detail='Вы должны быть зарегистрированы, чтобы создать рецепт.'
             )
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
-        recipe = Recipe.objects.create(author=request.user, **validated_data)
+        recipe = Recipe.objects.create(author=author, **validated_data)
         recipe.tags.set(tags)
-        self.add_ingredients(ingredients, recipe)
-
+        self.add_ingredients(recipe, ingredients)
         return recipe
 
     @transaction.atomic
-    def update(self, instance, validated_data):
+    def update(self, recipe, validated_data):
         """Атомарный метод редактирования рецепта."""
-        if not instance.is_active:
-            raise NotFound(detail='Рецепт не найден')
         tags = validated_data.pop('tags')
-        instance.tags.set(tags)
+        if tags is not None:
+            recipe.tags.clear()
+            recipe.tags.set(tags)
         ingredients = validated_data.pop('ingredients')
         if ingredients is not None:
-            instance.ingredients.clear()
-            self.add_ingredients(ingredients, instance)
-
-        return super().update(instance, validated_data)
+            RecipeIngredient.objects.filter(recipe=recipe).delete()
+            self.add_ingredients(recipe, ingredients)
+        return super().update(recipe, validated_data)
 
     def to_representation(self, instance):
         """Возвращает сериализованные данные из метода RecipeSerializer."""
-        request = self.context.get('request')
-
-        return RecipeSerializer(instance, context={'request': request}).data
+        return RecipeSerializer(instance, context=self.context).data
 
 
 class RecipeShortSerializer(ModelSerializer):
-    """
-    Метод сокращенного рецепта для
-    добавления в избранное и подписок.
-    """
+    """Сокращенный сериалайзер рецепта для добавления в избранное и подписок"""
 
     class Meta:
         model = Recipe
@@ -191,17 +212,13 @@ class FavoriteRecipeSerializer(ModelSerializer):
     Используется в представлении RecipeViewSet для метода favorite.
     """
 
-    recipe = RecipeShortSerializer()
-
     class Meta:
         model = Favorite
-        fields = ('id', 'user', 'recipe',)
-        # убрала
+        fields = ('user', 'recipe',)
         validators = [
             validators.UniqueTogetherValidator(
                 queryset=Favorite.objects.all(),
                 fields=['user', 'recipe'],
-                message='Рецепт уже находится в избранном.'
             )
         ]
 
@@ -215,44 +232,11 @@ class FavoriteRecipeSerializer(ModelSerializer):
 class ShoppingCartSerializer(ModelSerializer):
     """
     Предаставление модели ShoppingCart.
-    Используется в прендставлении RecipeViewSet в методе shopping_cart.
-    """
+    Используется в прендставлении RecipeViewSet в методе shopping_cart."""
 
     class Meta:
         model = ShoppingCart
         fields = ('user', 'recipe',)
-
-    def get_queryset(self):
-        """
-        Метод переопределяет стандартный метод get_queryset() модели.
-        ДОбавляем дополнительное поле is_in_shopping_cart,
-        которое указывает, находится ли рецепт в корзине покупок пользователя.
-        """
-        queryset = super().get_queryset()
-
-        if self.context['request'].user.is_authenticated:
-            queryset = queryset.annotate(
-                is_in_shopping_cart=Exists(
-                    ShoppingCart.objects.filter(
-                        user=self.context['request'].user,
-                        recipe_id=OuterRef('pk')
-                    )
-                )
-            )
-
-        return queryset
-
-    def validate(self, data):
-        """
-        Проверяет, что рецепт не был добавлен ранее.
-        """
-        queryset = self.get_queryset()
-
-        if queryset.filter(recipe=data['recipe']
-                           ).filter(is_in_shopping_cart=True).exists():
-            raise ValidationError('Рецепт уже добавлен в корзину.')
-
-        return data
 
 
 class UserSubscribeSerializer(ModelSerializer):

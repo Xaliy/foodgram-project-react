@@ -1,12 +1,10 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from rest_framework.authtoken.models import TokenProxy
 
-from .models import User
+from .models import Subscription, User
 
 
 @admin.register(User)
-class UserAdmin(UserAdmin):
+class UserAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'username',
@@ -18,4 +16,9 @@ class UserAdmin(UserAdmin):
     list_filter = ('username', 'email',)
     search_fields = ('username', 'email', 'first_name', 'last_name')
 
-    admin.site.unregister(TokenProxy)
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'author')
+    list_filter = ('user', 'author')
+    search_fields = ('user', 'author')
