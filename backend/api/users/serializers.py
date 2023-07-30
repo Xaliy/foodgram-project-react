@@ -4,23 +4,28 @@ from djoser.serializers import (
 )
 from djoser.serializers import UserSerializer as DjoserUserSerialiser
 from rest_framework import serializers
-from rest_framework.validators import UniqueTogetherValidator
 
-from recipes.models import Recipe, Subscription
-from api.recipes.serializers import ReadFavoriteSerializer
+from users.models import Subscription
 
 User = get_user_model()
 
 
 class UserSerializer(DjoserUserSerialiser):
-    """Сериализатор модели User создания пользователя."""
+    """Сериализатор модели User. Валидация username, email."""
 
     is_subscribed = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name',
-                  'last_name', 'is_subscribed')
+        fields = ('id', 'username', 'email',
+                  'first_name', 'last_name', 'is_subscribed')
+
+    def validate_email(self, value):
+        """Метод проверки зарегистрированного Email."""
+        norm_email = value.lower()
+        if User.objects.filter(email=norm_email).exists():
+            raise serializers.ValidationError('Email уже зарегистрирован')
+        return norm_email
 
     def get_is_subscribed(self, obj):
         """Метод наличия подписки на пользователя модели Subscription."""
@@ -36,70 +41,6 @@ class UserCreateSerializer(DjoserUserCreateSerializer):
     """Сериализатор создания User."""
 
     class Meta:
-        model = User
         fields = ('username', 'password', 'email',
-                  'first_name', 'last_name')
-
-    def validate_email(self, value):
-        """Метод проверки зарегистрированного Email."""
-        norm_email = value.lower()
-        if User.objects.filter(email=norm_email).exists():
-            raise serializers.ValidationError('Email уже зарегистрирован')
-        return norm_email
-
-
-class ReadSubscriptionsSerializer(serializers.ModelSerializer):
-    """Сериализатор для отображения подписок пользователя Subscription."""
-
-    recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
-    is_subscribed = serializers.SerializerMethodField()
-
-    class Meta:
+                  'first_name', 'last_name',)
         model = User
-        fields = ('id', 'username', 'first_name', 'last_name',
-                  'is_subscribed', 'recipes', 'recipes_count')
-
-    def get_is_subscribed(self, obj):
-        request = self.context.get('request')
-        if request is None or request.user.is_anonymous:
-            return False
-        return Subscription.objects.filter(
-            user=request.user, author=obj
-        ).exists()
-
-    def get_recipes(self, obj):
-        request = self.context.get('request')
-        if not request or request.user.is_anonymous:
-            return False
-        recipes = Recipe.objects.filter(author=obj)
-        limit = request.query_params.get('recipes_limit')
-        if limit:
-            recipes = recipes[:int(limit)]
-        return ReadFavoriteSerializer(
-            recipes,
-            many=True,
-            context={'request': request}
-        ).data
-
-    def get_recipes_count(self, obj):
-        return Recipe.objects.filter(author=obj).count()
-
-
-class WriteSubscriptionSerializer(serializers.ModelSerializer):
-    """Сериализатор подписки  используем в SubscribeView."""
-
-    class Meta:
-        model = Subscription
-        fields = ('user', 'author')
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Subscription.objects.all(),
-                fields=['user', 'author'],
-            )
-        ]
-
-    def to_representation(self, instance):
-        return ReadSubscriptionsSerializer(instance.author, context={
-            'request': self.context.get('request')
-        }).data

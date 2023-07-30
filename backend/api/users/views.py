@@ -1,76 +1,79 @@
-from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
-from recipes.models import Subscription
-from rest_framework import status
-from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from http import HTTPStatus
 
-# from .serializers import ( # ReadSubscriptionsSerializer,
-#                           WriteSubscriptionSerializer,
-#                           UserSerializer
-# )
-from .serializers import (WriteSubscriptionSerializer,
-                          UserSerializer)
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
+from djoser.views import UserViewSet
+from rest_framework import filters
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+
+from api.paginators import CustomPaginator
+from users.models import Subscription
+
+from api.recipes.serializers import UserSubscribeSerializer
 
 User = get_user_model()
 
 
-class SubscribeView(APIView):
-    """Подписка на авторов."""
+class UsersViewSet(UserViewSet):
+    """Представление модели пользователей."""
 
-    permission_classes = [IsAuthenticated]
+    queryset = User.objects.all()
+    pagination_class = CustomPaginator
+    permission_classes = (AllowAny, )
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username']
 
-    def post(self, request, id):
-        """Метод создания подписки на других авторов. Subscribe."""
-        data = {
-            'user': request.user.id,
-            'author': id
-        }
-        serializer = WriteSubscriptionSerializer(
-            data=data,
-            context={'request': request}
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, id):
-        """Метод удаления подписки на других авторов. Subscribe."""
+    @action(
+        detail=True,
+        methods=['POST', 'DELETE'],
+        permission_classes=[IsAuthenticated]
+    )
+    def subscribe(self, request, id):
+        """Метод создания подписки на других авторов."""
         author = get_object_or_404(User, id=id)
-
-        subscription_db = Subscription.objects.filter(
+        user = request.user
+        subscription = Subscription.objects.filter(
+            user=user, author=author
+        )
+        if request.method == 'DELETE':
+            try:
+                subscription.delete()
+                return Response(
+                    f'Подписка на автора {author.username} удалена',
+                    status=HTTPStatus.OK)
+            except ObjectDoesNotExist:
+                return Response('Вы не подписаны на данного автора',
+                                status=HTTPStatus.BAD_REQUEST)
+        if request.user.id == author.id:
+            raise ValidationError('Запрещена подписка на самого себя')
+        if subscription.exists():
+            raise ValidationError('Вы уже подписаны на этого автора')
+        subscription = Subscription.objects.create(
             user=request.user,
             author=author
         )
-
-        if subscription_db.exists():
-            subscription_db.delete()
-
-            return Response(
-                {'status': f'Подписка на автора {author.username} удалена'},
-                status=status.HTTP_200_OK
-            )
-
-        return Response(
-            {'errors': 'Вы не подписаны на данного автора'},
-            status=status.HTTP_400_BAD_REQUEST
+        serializer = UserSubscribeSerializer(
+            author,
+            context={'request': request},
         )
+        return Response(serializer.data, status=HTTPStatus.CREATED)
 
-
-class SubscriptionsView(ListAPIView):
-    """Список подписок пользователя. Subscriptions."""
-
-    permission_classes = [IsAuthenticated]
-    serializer_class = WriteSubscriptionSerializer
-
-    def get_queryset(self):
-        """Метод список подписок пользоваетеля. Subscriptions."""
-        return Subscription.objects.filter(user=self.request.user)
-
-    def get_subscriptions(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+    @action(
+        detail=False,
+        methods=['GET'],
+        permission_classes=[IsAuthenticated],
+        pagination_class=CustomPaginator
+    )
+    def subscriptions(self, request):
+        """Метод список подписок пользоваетеля."""
+        user = request.user
+        queryset = User.objects.filter(subscribers__user=user)
+        page = self.paginate_queryset(queryset)
+        serializer = UserSubscribeSerializer(
+            page, many=True, context={'request': request}
+        )
+        return self.get_paginated_response(serializer.data)

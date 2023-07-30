@@ -1,10 +1,11 @@
 import os
-from pathlib import Path
 
+from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env_path = BASE_DIR.parent / '.env'
 load_dotenv(find_dotenv())
 
 SECRET_KEY = os.getenv('SECRET_KEY', default='None')
@@ -13,7 +14,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', default='None')
 # DEBUG = os.getenv('DEBUG', 'False') == 'True'
 DEBUG = True
 
-# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*', ])
+# ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default=['*', ]).split(',')
 ALLOWED_HOSTS = ['*']
 
 
@@ -117,7 +118,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',  # по токену
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'DEFAULT_FILTER_BACKENDS': [
@@ -154,11 +155,7 @@ DJOSER = {
         'current_user': 'api.users.serializers.UserSerializer',
     },
     'PERMISSIONS': {
-        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
-        # 'user_list': ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+        'user': ['rest_framework.permissions.AllowAny'],
         'user_list': ['rest_framework.permissions.AllowAny'],
-        'username_reset': ['rest_framework.permissions.IsAdminUser'],
-        'username_reset_confirm': ['rest_framework.permissions.IsAdminUser'],
-        'user_delete': ['rest_framework.permissions.IsAdminUser'],
     },
 }

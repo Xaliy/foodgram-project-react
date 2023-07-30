@@ -77,8 +77,8 @@ class Recipe(models.Model):
     image = models.ImageField(
         verbose_name='Изображение рецепта',
         upload_to='static/',
-        null=True,
-        default=None
+        blank=True,
+        null=True
     )
     text = models.TextField(
         verbose_name='Описание рецепта',
@@ -87,7 +87,7 @@ class Recipe(models.Model):
     ingredients = models.ManyToManyField(
         Ingredient,  # класс
         through='RecipeIngredient',  # уникальность
-        verbose_name='Список ингредиентов'
+        verbose_name='Список ингредиентов',
     )
     cooking_time = models.PositiveSmallIntegerField(
         verbose_name='Время приготовления в минутах',
@@ -104,8 +104,7 @@ class Recipe(models.Model):
     tags = models.ManyToManyField(
         Tag,
         verbose_name='Тег рецепта',
-        # related_name='recipes'
-        related_name='tags'
+        related_name='recipes'
     )
 
     class Meta:
@@ -123,15 +122,14 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        # related_name='recipe_ingredients',
+        related_name='recipe_ingredient',
         verbose_name='Рецепт'
     )
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        verbose_name='Ингредиент',
-        null=True,
-        default=None
+        related_name='ingredient',
+        verbose_name='Ингредиент'
     )
     amount = models.PositiveSmallIntegerField(
         verbose_name='Колличество ингредиентов',
@@ -182,7 +180,7 @@ class ShoppingCart(models.Model):
         User,
         verbose_name='Пользователь',
         on_delete=models.CASCADE,
-        related_name='shopping_list'
+        related_name='carts'
     )
     recipe = models.ForeignKey(
         Recipe,
@@ -198,43 +196,9 @@ class ShoppingCart(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='user_shoppingcart_unique',
+                name='unique_shoppingcart_recipe_user',
             ),
         ]
 
     def __str__(self):
         return f'Рецепт {self.user} в избранном {self.recipe}'
-
-
-class Subscription(models.Model):
-    """Класс подписок."""
-
-    user = models.ForeignKey(
-        User,
-        verbose_name='Подписчик',
-        related_name='follower',
-        on_delete=models.CASCADE,
-        help_text='Данный пользователь станет подписчиком автора'
-    )
-    author = models.ForeignKey(
-        User,
-        verbose_name='Подписка автор',
-        related_name='author',
-        # related_name='subscribers',
-        on_delete=models.CASCADE,
-        help_text='На автора могут подписаться другие пользователи',
-    )
-
-    class Meta:
-        ordering = ('-id',)
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'author'),
-                name='unique_user_author'
-            ),
-        )
-        verbose_name = 'Подписка',
-        verbose_name_plural = 'Подписки'
-
-    def __str__(self):
-        return f"{self.user} подписка на {self.author}"

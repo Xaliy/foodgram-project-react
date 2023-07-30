@@ -3,19 +3,20 @@ from tempfile import TemporaryFile
 
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
-# from django.http import FileResponse
-from django.http import HttpResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import (AllowAny, IsAuthenticated)
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api.permissions import IsAuthor
+from api.paginators import CustomPaginator
+from recipes.models import (Favorite, Ingredient, Recipe,
+                            ShoppingCart, Tag)
+
 from .filters import RecipeFilter
 from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
                           RecipePostSerializer, RecipeSerializer,
@@ -26,19 +27,17 @@ User = get_user_model()
 
 
 class TagViewSet(ReadOnlyModelViewSet):
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [AllowAny, ]
-    pagination_class = None
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = [AllowAny, ]
     filter_backends = [SearchFilter]
     search_fields = ('^name',)
-    pagination_class = None
 
 
 class RecipeViewSet(ModelViewSet):
@@ -48,10 +47,10 @@ class RecipeViewSet(ModelViewSet):
     """
 
     serializer_class = RecipeSerializer
-    permission_classes = (IsAuthor,)
+    permission_classes = (IsAuthor, )
     filter_backends = (DjangoFilterBackend, )
     filterset_class = RecipeFilter
-    pagination_class = LimitOffsetPagination
+    pagination_class = CustomPaginator
 
     def get_serializer_class(self):
         """Метод для выбора класса сериализатора."""
@@ -82,25 +81,6 @@ class RecipeViewSet(ModelViewSet):
             )
 
         return queryset
-        # author_id = self.request.query_params.get('author')
-        # if author_id:
-        #     author = get_object_or_404(User, pk=author_id)
-        #     return author.recipe.all()
-
-        # tags_slug = self.request.query_params.get('tags')
-        # if tags_slug:
-        #     tags = get_object_or_404(Tag, slug=tags_slug)
-        #     return tags.recipe.all()
-
-        # is_favorited = self.request.query_params.get('is_favorited')
-        # if is_favorited == '1':
-        #     return Recipe.objects.filter(favorite__user=self.request.user)
-        # is_in_shopping_cart = self.request.query_params.get(
-        #     'is_in_shopping_cart')
-        # if is_in_shopping_cart == '1':
-        #     return Recipe.objects.filter(
-        #         shopping_cart__user=self.request.user)
-        # return Recipe.objects.all()
 
     def add_to_list(self, request, pk, serializer_class, model_class):
         """
@@ -109,22 +89,13 @@ class RecipeViewSet(ModelViewSet):
         """
         recipe = get_object_or_404(Recipe, id=pk)
         data = {'user': request.user.id,
-                'recipe': recipe.id, }
+                'recipe': recipe.id}
         serializer = serializer_class(
             data=data, context={'request': request}
         )
 
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        # user = self.request.user
-        # recipe = get_object_or_404(Recipe, id=pk)
-        # serializer = serializer_class(
-        #     recipe,
-        #     data=request.data,
-        #     context={'request': request}
-        # )
-        # serializer.is_valid(raise_exception=True)
-        # model_class.objects.create(user=user, recipe=recipe)
 
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
@@ -186,13 +157,32 @@ class RecipeViewSet(ModelViewSet):
         detail=False,
         permission_classes=[IsAuthenticated],
     )
+    # def download_shopping_cart(self, request):
+    #     """
+    #     Метод скачивания списка покупок для всех рецептов,
+    #     которые добавлены в список покупок пользователя.
+    #     """
+    #     shopping_list = get_shopping_list(request.user)
+    #     filename = 'shop_list.txt'
+    #     response = HttpResponse(shopping_list, content_type='text/plain')
+    #     response['Content-Disposition'] = f'attachment; filename={filename}'
+    #     return response
     def download_shopping_cart(self, request):
         """
         Метод скачивания списка покупок для всех рецептов,
         которые добавлены в список покупок пользователя.
         """
-        shopping_list = get_shopping_list(request.user)
-        filename = 'shop_list.txt'
-        response = HttpResponse(shopping_list, content_type='text/plain')
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        return response
+        user = request.user
+        shopping_list = get_shopping_list(user)
+
+        # создаем временный файл для загрузки
+        with TemporaryFile() as file:
+            file.write(shopping_list.encode())
+            file.seek(0)
+
+            response = FileResponse(file, filename='shopping_list.txt')
+            response['Content-Disposition'] = '''attachment;
+                                                filename="shopping_list.txt"'''
+            response['Content-Length'] = file.tell()
+
+            return response
