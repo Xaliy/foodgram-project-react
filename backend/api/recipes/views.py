@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
+# from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
@@ -71,11 +71,14 @@ class RecipeViewSet(ModelViewSet):
             .prefetch_related('ingredients', 'tags')
         )
         user = self.request.user
-        favorite_qs = Favorite.objects.filter(user=user,
-                                              recipe=OuterRef('id'))
-        shopping_cart_qs = ShoppingCart.objects.filter(user=user,
-                                                       recipe=OuterRef('id'))
+
         if user.is_authenticated:
+            favorite_qs = Favorite.objects.filter(
+                user=user, recipe=OuterRef('id')
+            )
+            shopping_cart_qs = ShoppingCart.objects.filter(
+                user=user, recipe=OuterRef('id')
+            )
             queryset = queryset.annotate(
                 is_favorited=Exists(favorite_qs),
                 is_in_shopping_cart=Exists(shopping_cart_qs)
