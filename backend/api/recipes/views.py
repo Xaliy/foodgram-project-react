@@ -1,5 +1,4 @@
 from http import HTTPStatus
-from tempfile import TemporaryFile
 
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, OuterRef
