@@ -17,7 +17,7 @@ from api.paginators import CustomPaginator
 from recipes.models import (Favorite, Ingredient, Recipe,
                             ShoppingCart, Tag)
 
-from .filters import RecipeFilter
+from .filters import IngredientFilter, RecipeFilter
 from .serializers import (FavoriteRecipeSerializer, IngredientSerializer,
                           RecipePostSerializer, RecipeSerializer,
                           ShoppingCartSerializer, TagSerializer)
@@ -36,7 +36,9 @@ class IngredientViewSet(ReadOnlyModelViewSet):
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = [SearchFilter]
+    # filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, ]
+    filterset_class = IngredientFilter
     search_fields = ('^name', 'name')
 
 

@@ -1,7 +1,16 @@
-from django_filters.rest_framework import (BooleanFilter, FilterSet,
+from django_filters.rest_framework import (BooleanFilter, FilterSet, filters,
                                            ModelMultipleChoiceFilter)
 
-from recipes.models import Recipe, Tag
+from recipes.models import Ingredient, Recipe, Tag
+
+
+class IngredientFilter(FilterSet):
+    """Фильтр для поиска ингридиентов на сайте."""
+    name = filters.CharFilter(lookup_expr='startswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ['name']
 
 
 class RecipeFilter(FilterSet):
